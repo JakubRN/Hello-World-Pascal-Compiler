@@ -17,8 +17,6 @@ $(TARGET): $(OBJS)
 $(DEPS): %.d : %.c
 	$(CXX) -MM $< > $@
 
-lex.yy.c: flexer.l
-	lex flexer.l
 -include $(DEPS)
 
 .SILENT : clean 
