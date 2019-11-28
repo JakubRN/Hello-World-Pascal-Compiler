@@ -21,10 +21,12 @@ struct entry
 extern struct entry symtable[];
 int insert (char s[], int tok);
 void error (char *m) ;
+void yyerror (char *m);
 int lookup (char s[]) ;
 void init () ;
 void parse () ;
 int lexan () ;
+int yylex () ;
 void expr () ;
 void term () ;
 void factor () ;
