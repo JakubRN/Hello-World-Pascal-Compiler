@@ -6,11 +6,7 @@
 #define BSIZE 128
 #define NONE -1
 #define EOS '\0'
-#define NUM 256
-#define DIV 257
-#define MOD 258
-#define ID  259
-#define DONE 260
+
 extern int tokenval;
 extern int lineno;
 struct entry
@@ -20,11 +16,10 @@ struct entry
 };
 extern struct entry symtable[];
 int insert (char s[], int tok);
-void error (char *m) ;
-void yyerror (char *m);
+void error (const char *m) ;
+void yyerror (const char *m);
 int lookup (char s[]) ;
 void init () ;
-void parse () ;
 int lexan () ;
 int yylex () ;
 void expr () ;

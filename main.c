@@ -1,9 +1,10 @@
 #include "global.h"
+#include "bison_parser.tab.h"
 int
 main () 
 {
   init ();
-  parse ();
+  yyparse ();
   exit (0);
 }
 

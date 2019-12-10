@@ -1,4 +1,5 @@
 #include "global.h"
+#include "bison_parser.tab.h"
 void
 emit (int t, int tval) 
 {

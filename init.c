@@ -1,4 +1,5 @@
 #include "global.h"
+#include "bison_parser.tab.h"
 struct entry keywords[] = { 
   {"div", DIV}, 
   {"mod", MOD}, 

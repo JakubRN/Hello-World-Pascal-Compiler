@@ -1,13 +1,13 @@
 #include "global.h"
 
 void
-error (char *m) 
+error (const char *m) 
 {
   fprintf (stderr, "line%d:%s\n", lineno, m);
   exit (1);
 }
 void
-yyerror (char *m) 
+yyerror (const char *m) 
 {
     error(m);
 }

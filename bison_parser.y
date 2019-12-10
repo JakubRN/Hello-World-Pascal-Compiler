@@ -2,24 +2,32 @@
 #include <ctype.h>
 #include <stdio.h>
 #include "global.h"
-#define YYSTYPE double
-
+//#define YYSTYPE double
 %}
-%token number
+%token NUM
+%token ID
+%token DONE
+%token DIV 
+%token MOD 
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' MOD DIV
 %right UMINUS
 %%
-lines: lines expr '\n' { printf("%g\n", $2); }
-| lines '\n'
+
+lines : expr ';' lines  { printf("\n"); }
 | /* empty */
+| error '\n' { yyerror ( "re-enter previous line : " ) ; yyerrok ; }
 ;
-expr : expr '+' expr { $$ = $1 + $3; }
-| expr '-' expr { $$ = $1 - $3; }
-| expr '*' expr { $$ = $1 * $3; }
-| expr '/' expr { $$ = $1 / $3; }
-| '(' expr ')' { $$ = $2; }
-| '-' expr %prec UMINUS { $$ = -$2; }
-| number
+expr : expr '+' expr { emit('+', NONE); }
+| expr '-' expr { emit('-', NONE); }
+| expr '*' expr { emit('*', NONE); }
+| expr '/' expr { emit('/', NONE); }
+| expr DIV expr { emit(DIV, NONE); }
+| expr MOD expr { emit(MOD, NONE); }
+| '(' expr ')' { ; }
+| '-' expr %prec UMINUS {printf("-"); }
+| NUM {$$ = $1; emit (NUM, tokenval);}
+| ID {$$ = $1; emit(ID, tokenval);}
+| DONE {return 0;}
 ;
 %%
