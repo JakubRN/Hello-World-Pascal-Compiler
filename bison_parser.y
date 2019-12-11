@@ -25,7 +25,7 @@ expr : expr '+' expr { emit('+', NONE); }
 | expr DIV expr { emit(DIV, NONE); }
 | expr MOD expr { emit(MOD, NONE); }
 | '(' expr ')' { ; }
-| '-' expr %prec UMINUS {printf("-"); }
+| '-' expr %prec UMINUS { emit('-', NONE); }
 | NUM {$$ = $1; emit (NUM, tokenval);}
 | ID {$$ = $1; emit(ID, tokenval);}
 | DONE {return 0;}

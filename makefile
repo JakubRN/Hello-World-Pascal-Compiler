@@ -1,37 +1,45 @@
 RM=rm -f
-CXX=gcc
+CXX=g++
 CXXFLAGS= -g -Wall
 LDFLAGS=-lm -lfl
 TARGET=komp
 
-UNIQUESRCS= lex.yy.c bison_parser.tab.c bison_parser.tab.h
-SRCS := $(filter-out $(UNIQUESRCS),$(wildcard *.c))
-DEPS=$(patsubst %.c, %.d, $(SRCS))
-OBJS=$(patsubst %.c, %.o, $(SRCS)) lex.yy.o bison_parser.tab.o
+OBJDIR := obj
+DEPDIR := $(OBJDIR)/.deps
+DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 
-.c.o:
-	$(CXX) -c $(CXXFLAGS) $< -o $@
+UNIQUESRCS= lex.yy.c parser.cpp parser.h
+SRCS := $(filter-out $(UNIQUESRCS),$(wildcard *.c))
+DEPS=$(patsubst %.c, $(DEPDIR)/%.d, $(SRCS))
+OBJS=$(patsubst %.c, $(OBJDIR)/%.o, $(SRCS)) lex.yy.o parser.o
 
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS) 
 
-$(DEPS): %.d : %.c bison_parser.tab.h
-	$(CXX) -MM $< > $@
-lex.yy.o: lex.yy.c global.h
 
-bison_parser.tab.o: bison_parser.tab.c global.h bison_parser.tab.h
+COMPILE.c = $(CXX) $(DEPFLAGS) $(CXXFLAGS) -c
+
+$(OBJDIR)/%.o : %.c $(DEPDIR)/%.d | $(DEPDIR) lex.yy.c parser.h
+	$(COMPILE.c) $< -o $@
+
+
+$(DEPDIR): ; @mkdir -p $@
+
+$(DEPS):
+include $(wildcard $(DEPS))
+
+lex.yy.o: lex.yy.c global.h parser.h
+
+parser.o: parser.cpp global.h parser.h
 
 lex.yy.c: flexer.l
 	lex flexer.l
 
-bison_parser.tab.h bison_parser.tab.c: bison_parser.y
-	bison -d bison_parser.y
-
--include $(DEPS)
+parser.h parser.cpp: bison_parser.y
+		bison --defines=parser.h --output=parser.cpp bison_parser.y
 
 .SILENT : clean
 .PHONY : clean
-
 clean:
 	-$(RM) $(TARGET) $(OBJS) $(DEPS) $(UNIQUESRCS)
    
