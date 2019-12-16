@@ -8,10 +8,13 @@ OBJDIR := obj
 DEPDIR := $(OBJDIR)/.deps
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 
-UNIQUESRCS= lex.yy.c parser.cpp parser.h
+$(OBJDIR)/%.o : %.cpp
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+UNIQUESRCS= flexer.cpp parser.cpp parser.h
 SRCS := $(filter-out $(UNIQUESRCS),$(wildcard *.c))
 DEPS=$(patsubst %.c, $(DEPDIR)/%.d, $(SRCS))
-OBJS=$(patsubst %.c, $(OBJDIR)/%.o, $(SRCS)) lex.yy.o parser.o
+OBJS=$(patsubst %.c, $(OBJDIR)/%.o, $(SRCS))  $(OBJDIR)/flexer.o  $(OBJDIR)/parser.o
 
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS) 
@@ -19,7 +22,7 @@ $(TARGET): $(OBJS)
 
 COMPILE.c = $(CXX) $(DEPFLAGS) $(CXXFLAGS) -c
 
-$(OBJDIR)/%.o : %.c $(DEPDIR)/%.d | $(DEPDIR) lex.yy.c parser.h
+$(OBJDIR)/%.o : %.c $(DEPDIR)/%.d parser.h | $(DEPDIR) 
 	$(COMPILE.c) $< -o $@
 
 
@@ -28,12 +31,12 @@ $(DEPDIR): ; @mkdir -p $@
 $(DEPS):
 include $(wildcard $(DEPS))
 
-lex.yy.o: lex.yy.c global.h parser.h
+$(OBJDIR)/flexer.o: flexer.cpp global.h parser.h
 
-parser.o: parser.cpp global.h parser.h
+$(OBJDIR)/parser.o: parser.cpp global.h parser.h
 
-lex.yy.c: flexer.l
-	lex flexer.l
+flexer.cpp: flexer.l
+	lex -o flexer.cpp flexer.l
 
 parser.h parser.cpp: bison_parser.y
 		bison --defines=parser.h --output=parser.cpp bison_parser.y

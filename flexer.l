@@ -4,8 +4,6 @@
 #include "parser.h"
 
 int lineno = 1;
-int tokenval = NONE;
-
 int install_id();
 int scan_num();
 %}
@@ -19,9 +17,8 @@ opsign      [\+\-\*\/\(\);]
 %%
 [\n]        {lineno++;}
 {ws}        {/* no action and no return */}
-{number}    {scan_num(); return(NUM);}
-{id}        {tokenval = install_id();  return(symtable[tokenval].token);}
-<<EOF>>     {return(DONE);}
+{number}    {yylval = scan_num(); return(NUM);}
+{id}        {yylval = install_id();  return(symtable[yylval].token);}
 {opsign}    {return(yytext[0]);}
 %%
 /* procedure to install the lexeme, whose first character is pointed by yytext
@@ -35,6 +32,7 @@ int install_id() {
     return p;
 }
 int scan_num() {
-    sscanf(yytext, "%d", &tokenval);
-    return tokenval;
+    int number;
+    sscanf(yytext, "%d", &number);
+    return number;
 }

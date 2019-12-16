@@ -1,4 +1,6 @@
 *.d
 *.o
-lex.yy.c
+flexer.cpp
+parser.cpp
+parser.h
 komp
