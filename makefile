@@ -8,13 +8,11 @@ OBJDIR := obj
 DEPDIR := $(OBJDIR)/.deps
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 
-$(OBJDIR)/%.o : %.cpp
-	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 UNIQUESRCS= flexer.cpp parser.cpp parser.h
-SRCS := $(filter-out $(UNIQUESRCS),$(wildcard *.c))
-DEPS=$(patsubst %.c, $(DEPDIR)/%.d, $(SRCS))
-OBJS=$(patsubst %.c, $(OBJDIR)/%.o, $(SRCS))  $(OBJDIR)/flexer.o  $(OBJDIR)/parser.o
+SRCS := $(filter-out $(UNIQUESRCS),$(wildcard *.cpp))
+DEPS=$(patsubst %.cpp, $(DEPDIR)/%.d, $(SRCS))
+OBJS=$(patsubst %.cpp, $(OBJDIR)/%.o, $(SRCS))  $(OBJDIR)/flexer.o  $(OBJDIR)/parser.o
 
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS) 
@@ -22,7 +20,7 @@ $(TARGET): $(OBJS)
 
 COMPILE.c = $(CXX) $(DEPFLAGS) $(CXXFLAGS) -c
 
-$(OBJDIR)/%.o : %.c $(DEPDIR)/%.d parser.h | $(DEPDIR) 
+$(OBJDIR)/%.o : %.cpp $(DEPDIR)/%.d parser.h | $(DEPDIR) 
 	$(COMPILE.c) $< -o $@
 
 
@@ -32,8 +30,10 @@ $(DEPS):
 include $(wildcard $(DEPS))
 
 $(OBJDIR)/flexer.o: flexer.cpp global.h parser.h
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/parser.o: parser.cpp global.h parser.h
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 flexer.cpp: flexer.l
 	lex -o flexer.cpp flexer.l

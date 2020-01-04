@@ -19,10 +19,10 @@ emit (int t, int tval)
       printf ("MOD\n");
       break;
     case NUM:
-      printf ("%d\n", tval);
+      printf ("%lf\n", symtable[tval].number);
       break;
     case ID:
-      printf ("%s\n", symtable[tval].lexptr);
+      printf ("%s\n", symtable[tval].name.c_str());
       break;
     default:
       printf ("token %d , tokenval %d\n", t, tval);

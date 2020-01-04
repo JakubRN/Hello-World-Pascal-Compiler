@@ -2,7 +2,6 @@
 #include <ctype.h>
 #include <stdio.h>
 #include "global.h"
-//#define YYSTYPE double
 void
 yyerror (const char *m) ;
 %}

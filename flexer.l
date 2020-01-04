@@ -2,37 +2,42 @@
 /* recognize articles a, an, the */
 #include "global.h"
 #include "parser.h"
-
 int lineno = 1;
 int install_id();
-int scan_num();
+int install_num();
 %}
 delim       [ \t]
 ws          {delim}+
 letter      [A-Za-z]
 digit       [0-9]
 id          {letter}({letter}|{digit})*
-number      [0-9]+
+digits      {digit}+
+optional_fraction   (\.{digits})?
+optional_exponent   (E((\+|\-)?){digits})?
+num         {digits}{optional_fraction}{optional_exponent}
 opsign      [\+\-\*\/\(\);]     
 %%
 [\n]        {lineno++;}
 {ws}        {/* no action and no return */}
-{number}    {yylval = scan_num(); return(NUM);}
+{num}       {yylval = install_num(); return(symtable[yylval].token);}
 {id}        {yylval = install_id();  return(symtable[yylval].token);}
 {opsign}    {return(yytext[0]);}
 %%
 /* procedure to install the lexeme, whose first character is pointed by yytext
 and whose length is yyleng, into the symbol table and return a pointer thereto */
 int install_id() {
-     int p = lookup (yytext);
+     int p = lookup_name (yytext);
         if (p == 0){
-            // printf( "installing ID: %s, %d\n", yytext, yyleng);
-            p = insert (yytext, ID);
+            p = insert_name (yytext, ID);
         }
     return p;
 }
-int scan_num() {
-    int number;
-    sscanf(yytext, "%d", &number);
-    return number;
+int install_num() {
+    double number;
+    sscanf(yytext, "%lf", &number);
+    int p = lookup_num (number);
+        if (p == 0){
+            p = insert_num (number, NUM);
+        }
+    return p;
 }
