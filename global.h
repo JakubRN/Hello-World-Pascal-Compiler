@@ -5,8 +5,13 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#define BSIZE 128
+#include <cassert>
+#include "parser.h"
+
+//#define NDEBUG
+
 #define NONE -1
+
 #define EOS '\0'
 
 extern int tokenval;
