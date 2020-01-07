@@ -2,8 +2,11 @@
 #include <ctype.h>
 #include <stdio.h>
 #include "global.h"
+#include "entry.h"
 void
 yyerror (const char *m) ;
+
+std::vector<int> identifier_list_vect;
 %}
 %define parse.error verbose
 
@@ -25,7 +28,8 @@ yyerror (const char *m) ;
 %token VAR
 %token OF
 
-%token NUM
+%token NUM_INT
+%token NUM_REAL
 %token ID
 %token DIV 
 %token MOD 
@@ -38,22 +42,42 @@ yyerror (const char *m) ;
 %%
 
 program:
-    PROGRAM ID '(' identifier_list ')' ';'
+    PROGRAM ID '(' identifier_list ')' ';' {
+        //TODO write ID of the program
+        //TODO use identifier list
+        identifier_list_vect.clear();
+    }
     declarations
     subprogram_declarations
-    compound_statement
+    compound_statement '.'
 ;
 identifier_list:
-    identifier_list ',' ID
-    | ID
+    identifier_list ',' ID { identifier_list_vect.push_back($3); }
+    | ID { identifier_list_vect.push_back($1) ;}
 ;
 declarations:
-    declarations VAR identifier_list ':' type ';' {printf("it's a declaration\n"); }
+    declarations VAR identifier_list ':' type ';' {
+            for(const auto &symbol_table_index : identifier_list_vect) {
+                if($5 == INTEGER){
+                    std::cout << symtable[symbol_table_index].name << " is integer" << std::endl;
+                }
+                else if($5 == REAL){
+                    std::cout << symtable[symbol_table_index].name  << " is real" << std::endl;
+                }
+                else if($5 == ARRAY) {
+                    std::cout << symtable[symbol_table_index].name  << " is array" << std::endl;
+                }
+                else {
+                    std::cout << "identifiers are unknown" << std::endl;
+                }
+            }
+            identifier_list_vect.clear();
+        }
     | 
 ;
 type:
     standard_type
-    | ARRAY '[' NUM '.' '.' NUM ']' 
+    | ARRAY '[' NUM_INT '.' '.' NUM_INT ']' 
 standard_type:
     INTEGER
     | REAL
@@ -66,20 +90,58 @@ subprogram_declaration:
     subprogram_head declarations compound_statement
 ;
 subprogram_head:
-    FUNCTION ID arguments ':' standard_type ';'
-    | PROCEDURE ID arguments ';'
+    FUNCTION ID arguments ':' standard_type ';' 
+    { std::cout << symtable[$2].name << " is function" << std::endl;}
+    | PROCEDURE ID arguments ';' 
+    { std::cout << symtable[$2].name << " is procedure" << std::endl;}
 ;
 arguments:
-    '(' parameter_list ')'
+    '(' parameter_list ')' 
+    |
 ;
 parameter_list:
-    identifier_list ':' type
-    | parameter_list ';' identifier_list ':' type
+    identifier_list ':' type 
+    {
+        for(const auto &symbol_table_index : identifier_list_vect) {
+            if($3 == INTEGER){
+                std::cout << symtable[symbol_table_index].name << " is integer" << std::endl;
+            }
+            else if($3 == REAL){
+                std::cout << symtable[symbol_table_index].name  << " is real" << std::endl;
+            }
+            else if($3 == ARRAY) {
+                std::cout << symtable[symbol_table_index].name  << " is array" << std::endl;
+            }
+            else {
+                std::cout << "identifiers are unknown" << std::endl;
+            }
+        }
+        identifier_list_vect.clear();
+    }
+
+    | parameter_list ';' identifier_list ':' type 
+    {
+        for(const auto &symbol_table_index : identifier_list_vect) {
+            if($5 == INTEGER){
+                std::cout << symtable[symbol_table_index].name << " is integer" << std::endl;
+            }
+            else if($5 == REAL){
+                std::cout << symtable[symbol_table_index].name  << " is real" << std::endl;
+            }
+            else if($5 == ARRAY) {
+                std::cout << symtable[symbol_table_index].name  << " is array" << std::endl;
+            }
+            else {
+                std::cout << "identifiers are unknown" << std::endl;
+            }
+        }
+        identifier_list_vect.clear();
+    }
 ;
 compound_statement:
     __BEGIN
     optional_statements
-    __END '.'
+    __END
 ;
 optional_statements:
     statement_list
@@ -135,7 +197,8 @@ expr:
     | '+' expr %prec UPLUS { emit('+', NONE); }
 
     | '(' expr ')' { ; }
-    | NUM { emit (NUM, $1);}
+    | NUM_INT { emit (NUM_INT, $1);}
+    | NUM_REAL { emit (NUM_REAL, $1);}
     | ID { emit(ID, $1);}
 ;
 %%

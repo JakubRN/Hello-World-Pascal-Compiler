@@ -1,10 +1,11 @@
 %{
 /* recognize articles a, an, the */
 #include "global.h"
+#include "entry.h"
 #include "parser.h"
 int lineno = 1;
-int install_id();
-int install_num();
+int install(int ID_name);
+// int install_num();
 %}
 delim       [ \t]
 ws          {delim}+
@@ -14,8 +15,9 @@ id          {letter}({letter}|{digit})*
 digits      {digit}+
 optional_fraction   (\.{digits})?
 optional_exponent   (E((\+|\-)?){digits})?
-num         {digits}{optional_fraction}{optional_exponent}
-opsign      [\+\-\*\/\(\);\<\>\=\.\:\[\]\,]
+num_int         {digits}{optional_exponent}
+num_real         {digits}{optional_fraction}{optional_exponent}
+opsign      [\+\-\*\/\(\)\;\<\>\=\.\:\[\]\,]
 %%
 [\n]        {lineno++;}
 {ws}        {/* no action and no return */}
@@ -30,14 +32,15 @@ opsign      [\+\-\*\/\(\);\<\>\=\.\:\[\]\,]
 (end)       {return __END;}
 (function)  {return FUNCTION;}
 (procedure) {return PROCEDURE;}
-(array)     {return ARRAY;}
-(integer)       {return INTEGER;}
-(real)      {return REAL;}
+(array)     {yylval = ARRAY; return ARRAY;}
+(integer)   {yylval = INTEGER; return INTEGER;}
+(real)      {yylval = REAL; return REAL;}
 (program)   {return PROGRAM;}
 (var)       {return VAR;}
 (of)        {return OF;}
-{num}       {yylval = install_num(); return(symtable[yylval].token);}
-{id}        {yylval = install_id();  return(symtable[yylval].token);}
+{num_int}        {yylval = install(NUM_INT); return(symtable[yylval].token);}
+{num_real}       {yylval = install(NUM_REAL); return(symtable[yylval].token);}
+{id}        {yylval = install(ID);  return(symtable[yylval].token);}
 {opsign}    {return(yytext[0]);}
 %%
 //old relop that detects whole relative operations
@@ -45,19 +48,21 @@ opsign      [\+\-\*\/\(\);\<\>\=\.\:\[\]\,]
 
 /* procedure to install the lexeme, whose first character is pointed by yytext
 and whose length is yyleng, into the symbol table and return a pointer thereto */
-int install_id() {
-     int p = lookup_name (yytext);
+
+int install(int ID_name) {
+     int p = lookup_name (yytext, ID_name);
         if (p == 0){
-            p = insert_name (yytext, ID);
+            p = insert_name (yytext, ID_name);
         }
     return p;
 }
-int install_num() {
-    double number;
-    sscanf(yytext, "%lf", &number);
-    int p = lookup_num (number);
-        if (p == 0){
-            p = insert_num (number, NUM);
-        }
-    return p;
-}
+
+// int install_num() {
+//     double number;
+//     sscanf(yytext, "%lf", &number);
+//     int p = lookup_name (number);
+//         if (p == 0){
+//             p = insert_name (number, NUM_real);
+//         }
+//     return p;
+// }

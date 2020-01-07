@@ -1,9 +1,26 @@
 #include "global.h"
-#include <string.h>
-#include <iostream>
+
+
+std::ofstream output_file_stream;
+
 extern FILE* yyin;
 
 bool initialize_output_file(int argc, char *argv[]) {
+    std::string output_filename;
+    if (argc == 2) {
+		output_filename = std::string(argv[1]);
+	} else if (argc > 2) {
+		output_filename = std::string(argv[2]);
+	} else {
+		return false;
+	}
+    output_filename = output_filename.substr(0, output_filename.find_last_of("."));
+    output_filename += ".asm";
+	output_file_stream.open(output_filename, std::ofstream::out | std::ofstream::trunc);
+	if (!output_file_stream.is_open()) {
+		printf("Error: Cannot open output file");
+		return false;
+	}
     return true;
 }
 

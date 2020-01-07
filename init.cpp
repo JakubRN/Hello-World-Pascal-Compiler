@@ -1,12 +1,12 @@
 #include "global.h"
 #include "parser.h"
-
+#include "entry.h"
 void
 init () {
     entry keywords[] = { 
-        {"div", DIV, -1.0, true}, 
-        {"mod", MOD, -1.0, true}, 
-        {"", 0, -1.0, true} 
+        {"div", DIV}, 
+        {"mod", MOD}, 
+        {"", 0} 
     };
 
     struct entry *p;
