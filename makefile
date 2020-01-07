@@ -1,6 +1,6 @@
 RM=rm -f
 CXX=g++
-CXXFLAGS= -g -Wall
+CXXFLAGS= -std=c++1z -g -Wall 
 LDFLAGS=-lm -lfl
 TARGET=komp
 

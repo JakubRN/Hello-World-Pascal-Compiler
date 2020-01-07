@@ -2,6 +2,7 @@
 
 
 std::ofstream output_file_stream;
+std::stringstream temporary_output_stream;
 
 extern FILE* yyin;
 
@@ -46,8 +47,11 @@ int main (int argc, char *argv[]) {
 
     assert(initialize_output_file(argc, argv));
 
-    init ();
+    // init ();
     yyparse ();
+
+    output_file_stream << temporary_output_stream.rdbuf();
+    dump_symbol_table();
     exit (0);
 }
 

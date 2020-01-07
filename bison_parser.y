@@ -3,9 +3,8 @@
 #include <stdio.h>
 #include "global.h"
 #include "entry.h"
-void
-yyerror (const char *m) ;
 
+bool global_scope = true;
 std::vector<int> identifier_list_vect;
 %}
 %define parse.error verbose
@@ -25,8 +24,10 @@ std::vector<int> identifier_list_vect;
 %token INTEGER
 %token REAL
 %token PROGRAM
-%token VAR
 %token OF
+
+%token VAR
+%token LABEL
 
 %token NUM_INT
 %token NUM_REAL
@@ -43,7 +44,9 @@ std::vector<int> identifier_list_vect;
 
 program:
     PROGRAM ID '(' identifier_list ')' ';' {
-        //TODO write ID of the program
+        symtable[$1].token = LABEL;
+        generate_jump(symtable[$1].name);
+        generate_label(symtable[$1].name);
         //TODO use identifier list
         identifier_list_vect.clear();
     }
@@ -59,10 +62,10 @@ declarations:
     declarations VAR identifier_list ':' type ';' {
             for(const auto &symbol_table_index : identifier_list_vect) {
                 if($5 == INTEGER){
-                    std::cout << symtable[symbol_table_index].name << " is integer" << std::endl;
+                    set_variable_at_symbol_table(symbol_table_index, _INT_SIZE, INTEGER);
                 }
                 else if($5 == REAL){
-                    std::cout << symtable[symbol_table_index].name  << " is real" << std::endl;
+                    set_variable_at_symbol_table(symbol_table_index, _REAL_SIZE, REAL);
                 }
                 else if($5 == ARRAY) {
                     std::cout << symtable[symbol_table_index].name  << " is array" << std::endl;
@@ -166,8 +169,8 @@ unmatched_statement:
     | __IF expr __THEN matched_statement __ELSE unmatched_statement
 ;
 variable:
-    ID                  
-    | ID '[' expr ']' 
+    VAR                  
+    | VAR '[' expr ']' 
 ;
 procedure_statement:
     ID
@@ -185,7 +188,25 @@ expr:
     | expr LESS_THAN_OR_EQUAL expr { if($1 <= $3) printf("true"); else printf("false"); }
     | expr NOT_EQUAL expr { if($1 != $3) printf("true"); else printf("false"); }
 
-    | expr '+' expr  { emit('+', NONE); }
+    | expr '+' expr  {
+        std::cout << symtable[$1].variable_type << ", " << symtable[$3].variable_type << std::endl;
+        auto [index_input_1, index_input_2] = manage_type_conversion($1, $3);
+        
+        std::cout << symtable[index_input_1].variable_type << ", " << symtable[index_input_2].variable_type << std::endl;
+        std::string command;
+        int output_index;
+        if(symtable[index_input_1].variable_type == REAL) {
+            command = "add.r";
+            output_index = add_temporary_variable(REAL);
+        }
+        else {
+            command = "add.i";
+            output_index = add_temporary_variable(INTEGER);
+        }
+        generate_command(command, index_input_1, index_input_2, output_index);
+        $$ = output_index;
+        // emit('+', NONE);
+    }
     | expr '-' expr { emit('-', NONE); }
 
     | expr '*' expr { emit('*', NONE); }
@@ -197,9 +218,9 @@ expr:
     | '+' expr %prec UPLUS { emit('+', NONE); }
 
     | '(' expr ')' { ; }
-    | NUM_INT { emit (NUM_INT, $1);}
-    | NUM_REAL { emit (NUM_REAL, $1);}
-    | ID { emit(ID, $1);}
+    | NUM_INT { ; }
+    | NUM_REAL { ; }
+    | VAR {; }
 ;
 %%
 

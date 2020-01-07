@@ -28,6 +28,8 @@ opsign      [\+\-\*\/\(\)\;\<\>\=\.\:\[\]\,]
 (then)      {return __THEN;}
 (else)      {return __ELSE;}
 (:=)        {return ASSIGN_OP;}
+(div)       {return DIV;}
+(mod)       {return MOD;}
 (begin)     {return __BEGIN;}
 (end)       {return __END;}
 (function)  {return FUNCTION;}

@@ -1,8 +1,29 @@
 #include "global.h"
 #include "parser.h"
 #include "entry.h"
-void
-emit (int t, int tval) 
+
+std::tuple<int, int> manage_type_conversion(int input_1, int input_2) {
+
+    if(symtable[input_1].variable_type == symtable[input_2].variable_type) {
+        std::cout << "type is correct" << std::endl;
+        return {input_1, input_2};
+    }
+    else if(symtable[input_1].variable_type == INTEGER) {
+        std::cout << "casting first variable" << std::endl;
+        auto tmp = add_temporary_variable(REAL);
+        generate_command("inttoreal.i", input_1, tmp);
+        return {tmp, input_2};
+    }
+    else if(symtable[input_2].variable_type == INTEGER) {
+        std::cout << "casting second variable" << std::endl;
+        auto tmp_2 = add_temporary_variable(REAL);
+        generate_command("inttoreal.i", input_2, tmp_2);
+        return {input_1, tmp_2};
+    }
+    return {-1, -1};
+}
+
+void emit (int t, int tval) 
 {
   switch (t)
     
@@ -28,7 +49,11 @@ emit (int t, int tval)
         double number_real;
         sscanf(symtable[tval].name.c_str(), "%lf", &number_real);
         printf ("%lf\n", number_real);
+        break;
     case ID:
+      printf ("%s\n", symtable[tval].name.c_str());
+      break;
+    case VAR:
       printf ("%s\n", symtable[tval].name.c_str());
       break;
     default:

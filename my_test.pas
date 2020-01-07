@@ -5,6 +5,6 @@ var g,h:real;
 begin
     x := 5;
     y := 15.0;
-    g:=x+y;
+    g:=x+h;
     write(g)
 end.
