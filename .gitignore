@@ -4,3 +4,6 @@ flexer.cpp
 parser.cpp
 parser.h
 komp
+*.asm
+*.pas
+tests/*

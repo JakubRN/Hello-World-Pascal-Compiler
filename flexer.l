@@ -52,7 +52,7 @@ opsign      [\+\-\*\/\(\)\;\<\>\=\.\:\[\]\,]
 and whose length is yyleng, into the symbol table and return a pointer thereto */
 
 int install(int ID_name) {
-     int p = lookup_name (yytext, ID_name);
+     int p = lookup_name (yytext);
         if (p == 0){
             p = insert_name (yytext, ID_name);
         }

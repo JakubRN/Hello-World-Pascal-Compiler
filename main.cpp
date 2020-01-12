@@ -1,9 +1,9 @@
 #include "global.h"
 
 
-std::ofstream output_file_stream;
-std::stringstream temporary_output_stream;
 
+std::stringstream output_string_stream;
+std::ofstream output_file_stream;
 extern FILE* yyin;
 
 bool initialize_output_file(int argc, char *argv[]) {
@@ -17,6 +17,7 @@ bool initialize_output_file(int argc, char *argv[]) {
 	}
     output_filename = output_filename.substr(0, output_filename.find_last_of("."));
     output_filename += ".asm";
+
 	output_file_stream.open(output_filename, std::ofstream::out | std::ofstream::trunc);
 	if (!output_file_stream.is_open()) {
 		printf("Error: Cannot open output file");
@@ -47,10 +48,10 @@ int main (int argc, char *argv[]) {
 
     assert(initialize_output_file(argc, argv));
 
-    // init ();
+    init ();
     yyparse ();
 
-    output_file_stream << temporary_output_stream.rdbuf();
+    output_file_stream << output_string_stream.rdbuf();
     dump_symbol_table();
     exit (0);
 }

@@ -13,8 +13,12 @@ struct entry {
          name(std::move(_name)), token(_token) { ; }
 
     std::string get_variable_to_asm(){
-        auto return_str = name;
-        if(is_reference) return_str = '&' + return_str;
-        return return_str;
+        std::string return_name;
+        if(token == NUM_INT || token == NUM_REAL)
+            return_name = "#" + name;
+        else if(token == VAR)
+            return_name = std::to_string(memory_offset);
+        if(is_reference) return_name = '*' + return_name;
+        return return_name;
     };
 };

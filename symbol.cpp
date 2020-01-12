@@ -5,7 +5,7 @@
 
 std::vector<entry> symtable;
 int number_of_temporary_variables = 0;
-int lookup_name (char s[], int tok) {
+int lookup_name (std::string s) {
   for (std::size_t i = 0; i < symtable.size(); ++i) {
     if (symtable[i].name.compare(s) == 0)
       return i;
@@ -36,7 +36,7 @@ void set_variable_at_symbol_table(int index, int size, int var_type) {
 }
 
 int add_temporary_variable(int type) {
-    auto tmp_variable_name = std::string("$t") + std::to_string(++number_of_temporary_variables);
+    auto tmp_variable_name = std::string("$t") + std::to_string(number_of_temporary_variables++);
     auto index = insert_name(tmp_variable_name, VAR);
     if(type == INTEGER) {
         set_variable_at_symbol_table(index, _INT_SIZE, INTEGER);

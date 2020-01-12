@@ -44,15 +44,15 @@ std::vector<int> identifier_list_vect;
 
 program:
     PROGRAM ID '(' identifier_list ')' ';' {
-        symtable[$1].token = LABEL;
-        generate_jump(symtable[$1].name);
-        generate_label(symtable[$1].name);
+        symtable[$2].token = LABEL;
+        generate_jump(symtable[$2].name);
+        generate_label(symtable[$2].name);
         //TODO use identifier list
         identifier_list_vect.clear();
     }
     declarations
     subprogram_declarations
-    compound_statement '.'
+    compound_statement '.' {append_command_to_stream("exit");}
 ;
 identifier_list:
     identifier_list ',' ID { identifier_list_vect.push_back($3); }
@@ -160,7 +160,7 @@ statement:
 ;
 matched_statement:
     __IF expr __THEN matched_statement __ELSE matched_statement
-    |variable ASSIGN_OP expr
+    |variable ASSIGN_OP expr { generate_assign_op($1, $3); }
     | procedure_statement
     | compound_statement
 ;
@@ -174,7 +174,17 @@ variable:
 ;
 procedure_statement:
     ID
-    | ID '(' expression_list ')'
+    | ID '(' expression_list ')' {
+        auto write_id = lookup_name("write");
+        auto read_id = lookup_name("read");
+        if($1 == write_id || $1 == read_id) {
+            if(symtable[$3].variable_type == REAL)
+                generate_command("write.r", $3);
+            else if(symtable[$3].variable_type == INTEGER)
+                generate_command("write.i", $3);
+            else yyerror("wrong type of variable to write: expecting real or int");
+        }
+    }
 ;
 expression_list:
     expr
@@ -188,39 +198,21 @@ expr:
     | expr LESS_THAN_OR_EQUAL expr { if($1 <= $3) printf("true"); else printf("false"); }
     | expr NOT_EQUAL expr { if($1 != $3) printf("true"); else printf("false"); }
 
-    | expr '+' expr  {
-        std::cout << symtable[$1].variable_type << ", " << symtable[$3].variable_type << std::endl;
-        auto [index_input_1, index_input_2] = manage_type_conversion($1, $3);
-        
-        std::cout << symtable[index_input_1].variable_type << ", " << symtable[index_input_2].variable_type << std::endl;
-        std::string command;
-        int output_index;
-        if(symtable[index_input_1].variable_type == REAL) {
-            command = "add.r";
-            output_index = add_temporary_variable(REAL);
-        }
-        else {
-            command = "add.i";
-            output_index = add_temporary_variable(INTEGER);
-        }
-        generate_command(command, index_input_1, index_input_2, output_index);
-        $$ = output_index;
-        // emit('+', NONE);
-    }
-    | expr '-' expr { emit('-', NONE); }
+    | expr '+' expr  { $$ = generate_arithmetic_operation("add", $1, $3); }
+    | expr '-' expr { $$ = generate_arithmetic_operation("sub", $1, $3); }
 
-    | expr '*' expr { emit('*', NONE); }
-    | expr '/' expr { emit('/', NONE); }
-    | expr DIV expr { emit(DIV, NONE); }
-    | expr MOD expr { emit(MOD, NONE); }
+    | expr '*' expr { $$ = generate_arithmetic_operation("mul", $1, $3); }
+    | expr '/' expr { $$ = generate_arithmetic_operation("div", $1, $3); }
+    | expr DIV expr { $$ = generate_arithmetic_operation("div", $1, $3); }
+    | expr MOD expr { $$ = generate_arithmetic_operation("add", $1, $3); }
 
-    | '-' expr %prec UMINUS { emit('-', NONE); }
-    | '+' expr %prec UPLUS { emit('+', NONE); }
+    | '-' expr %prec UMINUS { }
+    | '+' expr %prec UPLUS  { }
 
     | '(' expr ')' { ; }
-    | NUM_INT { ; }
-    | NUM_REAL { ; }
-    | VAR {; }
+    | NUM_INT { symtable[$1].variable_type = INTEGER; }
+    | NUM_REAL { symtable[$1].variable_type = REAL; }
+    | VAR { ; }
 ;
 %%
 
