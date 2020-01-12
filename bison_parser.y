@@ -5,7 +5,12 @@
 #include "entry.h"
 
 bool global_scope = true;
+int relative_stack_pointer;
 std::vector<int> identifier_list_vect;
+std::vector<int> expression_list_vect;
+std::stringstream single_module_output;
+std::stack<entry> module_stack;
+
 %}
 %define parse.error verbose
 
@@ -44,15 +49,19 @@ std::vector<int> identifier_list_vect;
 
 program:
     PROGRAM ID '(' identifier_list ')' ';' {
-        symtable[$2].token = LABEL;
         generate_jump(symtable[$2].name);
-        generate_label(symtable[$2].name);
+        symtable[$2].token = LABEL;
         //TODO use identifier list
         identifier_list_vect.clear();
     }
-    declarations
-    subprogram_declarations
-    compound_statement '.' {append_command_to_stream("exit");}
+    declarations {global_scope = false;}
+    subprogram_declarations { 
+        generate_label(symtable[$2].name);
+        global_scope = true;
+        }
+    compound_statement '.' {
+        append_command_to_stream("exit");
+        }
 ;
 identifier_list:
     identifier_list ',' ID { identifier_list_vect.push_back($3); }
@@ -60,20 +69,8 @@ identifier_list:
 ;
 declarations:
     declarations VAR identifier_list ':' type ';' {
-            for(const auto &symbol_table_index : identifier_list_vect) {
-                if($5 == INTEGER){
-                    set_variable_at_symbol_table(symbol_table_index, _INT_SIZE, INTEGER);
-                }
-                else if($5 == REAL){
-                    set_variable_at_symbol_table(symbol_table_index, _REAL_SIZE, REAL);
-                }
-                else if($5 == ARRAY) {
-                    std::cout << symtable[symbol_table_index].name  << " is array" << std::endl;
-                }
-                else {
-                    std::cout << "identifiers are unknown" << std::endl;
-                }
-            }
+            set_identifier_type_at_symbol_table($5, identifier_list_vect);
+
             identifier_list_vect.clear();
         }
     | 
@@ -90,55 +87,59 @@ subprogram_declarations:
     | 
 ;
 subprogram_declaration:
-    subprogram_head declarations compound_statement
+    subprogram_head declarations compound_statement {
+        generate_command("leave");
+        generate_command("return");
+        auto number_to_append = std::to_string(abs(relative_stack_pointer) - 4);
+        append_command_to_stream("enter.i", "#" + number_to_append, number_to_append);
+        output_string_stream << single_module_output.str();
+        single_module_output.str(std::string());
+    }
 ;
 subprogram_head:
-    FUNCTION ID arguments ':' standard_type ';' 
-    { std::cout << symtable[$2].name << " is function" << std::endl;}
-    | PROCEDURE ID arguments ';' 
-    { std::cout << symtable[$2].name << " is procedure" << std::endl;}
+    FUNCTION ID arguments ':' standard_type ';' {
+        //Expects you to push return variable first, and then arguments
+        symtable[$2].is_global = false;
+        symtable[$2].is_reference = true;
+        symtable[$2].token = FUNCTION;
+        symtable[$2].memory_offset = relative_stack_pointer;
+        symtable[$2].variable_type = $5;
+        relative_stack_pointer = -4;
+        std::cout << "memory offset: " << symtable[$2].memory_offset << std::endl;
+        generate_label(symtable[$2].name);
+        identifier_list_vect.clear();
+        }
+    | PROCEDURE ID arguments ';' { 
+        symtable[$2].is_global = false;
+        symtable[$2].token = PROCEDURE;
+        relative_stack_pointer = -4;
+        generate_label(symtable[$2].name);
+        identifier_list_vect.clear();
+        }
 ;
 arguments:
-    '(' parameter_list ')' 
-    |
+    '(' parameter_list ')' {
+        relative_stack_pointer = 8;
+        for(const auto &symbol_table_index : identifier_list_vect) {
+            assert(symtable[symbol_table_index].is_global == false);
+            symtable[symbol_table_index].memory_offset = relative_stack_pointer;
+            symtable[symbol_table_index].size = 4;
+            symtable[symbol_table_index].is_reference=true;
+            relative_stack_pointer += 4;
+            std::cout << relative_stack_pointer << std::endl;
+        }
+    }
+    | {
+        relative_stack_pointer = 8;
+    }
 ;
 parameter_list:
-    identifier_list ':' type 
+    parameter_list ';' identifier_list ':' type 
     {
-        for(const auto &symbol_table_index : identifier_list_vect) {
-            if($3 == INTEGER){
-                std::cout << symtable[symbol_table_index].name << " is integer" << std::endl;
-            }
-            else if($3 == REAL){
-                std::cout << symtable[symbol_table_index].name  << " is real" << std::endl;
-            }
-            else if($3 == ARRAY) {
-                std::cout << symtable[symbol_table_index].name  << " is array" << std::endl;
-            }
-            else {
-                std::cout << "identifiers are unknown" << std::endl;
-            }
-        }
-        identifier_list_vect.clear();
+        set_identifier_type_at_symbol_table($5, identifier_list_vect);
     }
-
-    | parameter_list ';' identifier_list ':' type 
-    {
-        for(const auto &symbol_table_index : identifier_list_vect) {
-            if($5 == INTEGER){
-                std::cout << symtable[symbol_table_index].name << " is integer" << std::endl;
-            }
-            else if($5 == REAL){
-                std::cout << symtable[symbol_table_index].name  << " is real" << std::endl;
-            }
-            else if($5 == ARRAY) {
-                std::cout << symtable[symbol_table_index].name  << " is array" << std::endl;
-            }
-            else {
-                std::cout << "identifiers are unknown" << std::endl;
-            }
-        }
-        identifier_list_vect.clear();
+    | identifier_list ':' type {
+        set_identifier_type_at_symbol_table($3, identifier_list_vect);
     }
 ;
 compound_statement:
@@ -169,12 +170,13 @@ unmatched_statement:
     | __IF expr __THEN matched_statement __ELSE unmatched_statement
 ;
 variable:
-    VAR                  
+    FUNCTION
+    | VAR                  
     | VAR '[' expr ']' 
 ;
 procedure_statement:
-    ID
-    | ID '(' expression_list ')' {
+    PROCEDURE
+    | PROCEDURE '(' expression_list ')' {
         auto write_id = lookup_name("write");
         auto read_id = lookup_name("read");
         if($1 == write_id || $1 == read_id) {
@@ -188,7 +190,7 @@ procedure_statement:
 ;
 expression_list:
     expr
-    | expression_list',' expr
+    | expression_list ',' expr
 ;
 expr:
     expr '<' expr { if($1 < $3) printf("true"); else printf("false"); }
@@ -213,6 +215,7 @@ expr:
     | NUM_INT { symtable[$1].variable_type = INTEGER; }
     | NUM_REAL { symtable[$1].variable_type = REAL; }
     | VAR { ; }
+    | FUNCTION
 ;
 %%
 

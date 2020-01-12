@@ -4,8 +4,8 @@
 void
 init () {
     entry keywords[] = { 
-        {"read", ID}, 
-        {"write", ID}, 
+        {"read", PROCEDURE}, 
+        {"write", PROCEDURE}, 
         {"", 0} 
     };
 

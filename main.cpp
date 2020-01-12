@@ -47,7 +47,7 @@ int main (int argc, char *argv[]) {
     yyin = input_file;
 
     assert(initialize_output_file(argc, argv));
-
+    
     init ();
     yyparse ();
 

@@ -3,6 +3,7 @@
 
 struct entry {
     bool is_reference = false;
+    bool is_global = true;
     std::string name;
     int token;
 
@@ -16,8 +17,13 @@ struct entry {
         std::string return_name;
         if(token == NUM_INT || token == NUM_REAL)
             return_name = "#" + name;
-        else if(token == VAR)
-            return_name = std::to_string(memory_offset);
+        else
+            return_name = std::to_string(abs(memory_offset));
+
+        if( ! is_global) {
+            if(memory_offset < 0) return_name = "BP-"+ return_name;
+            else return_name = "BP+"+ return_name;
+        }
         if(is_reference) return_name = '*' + return_name;
         return return_name;
     };

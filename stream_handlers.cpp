@@ -1,14 +1,14 @@
 #include "global.h"
 #include "entry.h"
 
-void append_command_to_stream(std::string command, std::string parameters, std::string parameters_string) {
-     output_string_stream  << std::setw(8) << " ";
+void append_command_to_stream(std::string command, std::string parameters, std::string parameters_string, std::stringstream &output) {
+     output  << std::setw(8) << " ";
     std::size_t command_width = 8;
     if(command.length() >= command_width) command_width = (command.length() + 1);
-    output_string_stream  << std::setw(command_width) << std::left << (command + " ");
-    output_string_stream  << std::setw(32 - command_width) << std::left << parameters;
-    output_string_stream  << ";" << std::setw(8) << std::left << (command + " ");
-    output_string_stream  << std::setw(24) << std::left << parameters_string << std::endl;
+    output  << std::setw(command_width) << std::left << (command + " ");
+    output  << std::setw(32 - command_width) << std::left << parameters;
+    output  << ";" << std::setw(8) << std::left << (command + " ");
+    output  << std::setw(24) << std::left << parameters_string << std::endl;
 }
 
 void generate_assign_op(int left_operand, int right_operand){
@@ -36,8 +36,8 @@ int generate_arithmetic_operation(std::string command, int index_operand_1, int 
         return output_index;
 }
 
-void generate_label(std::string label_name) {
-    output_string_stream << label_name << ':' << std::endl;
+void generate_label(std::string label_name, std::stringstream &output) {
+    output << label_name << ':' << std::endl;
 };
 
 void generate_command(std::string command_name, int first_arg, int second_arg, int third_arg) {
@@ -58,11 +58,14 @@ void generate_command(std::string command_name, int first_arg, int second_arg, i
         tmp_stringstream << "," << third_arg_str;
         comments_with_names <<  "," << symtable[third_arg].name;
     }
-    append_command_to_stream(command_name, tmp_stringstream.str(), comments_with_names.str());
+    if(global_scope)
+        append_command_to_stream(command_name, tmp_stringstream.str(), comments_with_names.str());
+    else
+        append_command_to_stream(command_name, tmp_stringstream.str(), comments_with_names.str(), single_module_output);
 };
 
 
-void generate_jump(std::string label_name) {
+void generate_jump(std::string label_name, std::stringstream &output) {
     
-    append_command_to_stream("jump.i", "#" + label_name, "#" + label_name);
+    append_command_to_stream("jump.i", "#" + label_name, "#" + label_name, output);
 }

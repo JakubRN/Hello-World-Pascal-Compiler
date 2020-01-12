@@ -6,7 +6,7 @@
 std::vector<entry> symtable;
 int number_of_temporary_variables = 0;
 int lookup_name (std::string s) {
-  for (std::size_t i = 0; i < symtable.size(); ++i) {
+  for (int i = symtable.size() - 1; i >= 0 ; --i) {
     if (symtable[i].name.compare(s) == 0)
       return i;
   }
@@ -23,16 +23,21 @@ int insert_name (std::string s, int tok)  {
 void set_memory_offset(entry &element) {
     int curr_offset = 0;
     for(auto &curr_entry : symtable) {
-        if(&curr_entry != &element)
+        if(&curr_entry != &element && curr_entry.is_global == true)
             curr_offset +=curr_entry.size;
     }
     element.memory_offset = curr_offset;
 }
 void set_variable_at_symbol_table(int index, int size, int var_type) {
+    if( global_scope) set_memory_offset(symtable[index]);
+    else {
+        symtable[index].is_global = false;
+        symtable[index].memory_offset = relative_stack_pointer;
+        relative_stack_pointer -= size;
+    }
     symtable[index].size = size;
     symtable[index].token = VAR;
     symtable[index].variable_type = var_type;
-    set_memory_offset(symtable[index]);
 }
 
 int add_temporary_variable(int type) {
@@ -53,15 +58,20 @@ int add_temporary_variable(int type) {
 }
 
 void dump_symbol_table() {
-    for(auto &curr_entry : symtable) {
+    for (size_t i = 0; i < symtable.size(); i++)
+    {
+        std::cout << i << ". ";
+        auto & curr_entry = symtable[i];
         switch (curr_entry.token)
         {
         case VAR:
             if(curr_entry.variable_type == INTEGER){
                 std::cout << " integer variable, value: " << curr_entry.name;
+                std::cout << " Offset: " << curr_entry.memory_offset << ", size: " << curr_entry.size;
             }
             else if(curr_entry.variable_type == REAL) {
                 std::cout << " real variable, value: " << curr_entry.name;
+                std::cout << " Offset: " << curr_entry.memory_offset << ", size: " << curr_entry.size;
             }
             break;
         case NUM_INT:
@@ -73,12 +83,21 @@ void dump_symbol_table() {
         case LABEL:
             std::cout << " label: " << curr_entry.name;
             break;
-        default:
-            std::cout << " unknown: " << curr_entry.name << std::endl;
-            continue;
+        case PROCEDURE:
+            std::cout << " procedure: " << curr_entry.name;
             break;
+        case FUNCTION:
+            std::cout << " function: " << curr_entry.name ;
+            if(curr_entry.variable_type == INTEGER){
+                std::cout << " returns int";
+            }
+            else if(curr_entry.variable_type == REAL) {
+                std::cout << " returns real " << curr_entry.name;
+            }
+            break;
+        default:
+            std::cout << " unknown: " << curr_entry.name;
         }
-        std::cout << " Offset: " << curr_entry.memory_offset << ", size: " << curr_entry.size;
         std::cout << std::endl;
     }
 }
