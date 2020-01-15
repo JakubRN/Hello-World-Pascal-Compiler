@@ -3,7 +3,7 @@
 #include "entry.h"
 
 
-void set_identifier_type_at_symbol_table(int type, std::vector<int> &identifier_list_vect) {
+void set_identifier_type_at_symbol_table(int type, std::list<int> &identifier_list_vect) {
     for(const auto &symbol_table_index : identifier_list_vect) {
         if(type == INTEGER){
             set_variable_at_symbol_table(symbol_table_index, _INT_SIZE, INTEGER);

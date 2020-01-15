@@ -4,10 +4,11 @@
 #include "global.h"
 #include "entry.h"
 
-bool global_scope = true;
 int relative_stack_pointer;
-std::vector<int> identifier_list_vect;
-std::vector<int> expression_list_vect;
+bool global_scope = true;
+std::list<int> identifier_list;
+std::list<int> parameters_list;
+std::list<int> expression_list;
 std::stringstream single_module_output;
 std::stack<entry> module_stack;
 
@@ -52,7 +53,7 @@ program:
         generate_jump(symtable[$2].name);
         symtable[$2].token = LABEL;
         //TODO use identifier list
-        identifier_list_vect.clear();
+        identifier_list.clear();
     }
     declarations {global_scope = false;}
     subprogram_declarations { 
@@ -64,14 +65,13 @@ program:
         }
 ;
 identifier_list:
-    identifier_list ',' ID { identifier_list_vect.push_back($3); }
-    | ID { identifier_list_vect.push_back($1) ;}
+    identifier_list ',' ID { identifier_list.emplace_back($3); }
+    | ID { identifier_list.emplace_back($1) ;}
 ;
 declarations:
     declarations VAR identifier_list ':' type ';' {
-            set_identifier_type_at_symbol_table($5, identifier_list_vect);
-
-            identifier_list_vect.clear();
+            set_identifier_type_at_symbol_table($5, identifier_list);
+            identifier_list.clear();
         }
     | 
 ;
@@ -98,48 +98,51 @@ subprogram_declaration:
 ;
 subprogram_head:
     FUNCTION ID arguments ':' standard_type ';' {
-        //Expects you to push return variable first, and then arguments
+        //Expects you to push return variable last
         symtable[$2].is_global = false;
         symtable[$2].is_reference = true;
         symtable[$2].token = FUNCTION;
-        symtable[$2].memory_offset = relative_stack_pointer;
+        symtable[$2].memory_offset = 8;
         symtable[$2].variable_type = $5;
+        symtable[$2].arguments_types = identifier_list;
         relative_stack_pointer = -4;
         std::cout << "memory offset: " << symtable[$2].memory_offset << std::endl;
         generate_label(symtable[$2].name);
-        identifier_list_vect.clear();
+
+        identifier_list.clear();
         }
     | PROCEDURE ID arguments ';' { 
         symtable[$2].is_global = false;
         symtable[$2].token = PROCEDURE;
         relative_stack_pointer = -4;
         generate_label(symtable[$2].name);
-        identifier_list_vect.clear();
+        identifier_list.clear();
         }
 ;
 arguments:
     '(' parameter_list ')' {
-        relative_stack_pointer = 8;
-        for(const auto &symbol_table_index : identifier_list_vect) {
+        parameters_list.reverse();
+        relative_stack_pointer = 12;
+        for(const auto &symbol_table_index : parameters_list) {
             assert(symtable[symbol_table_index].is_global == false);
             symtable[symbol_table_index].memory_offset = relative_stack_pointer;
             symtable[symbol_table_index].size = 4;
             symtable[symbol_table_index].is_reference=true;
             relative_stack_pointer += 4;
-            std::cout << relative_stack_pointer << std::endl;
         }
     }
-    | {
-        relative_stack_pointer = 8;
-    }
+    |
 ;
 parameter_list:
-    parameter_list ';' identifier_list ':' type 
-    {
-        set_identifier_type_at_symbol_table($5, identifier_list_vect);
+    parameter_list ';' identifier_list ':' type {
+        set_identifier_type_at_symbol_table($5, identifier_list);
+        parameters_list.splice(parameters_list.end(), identifier_list);
+        identifier_list.clear();
     }
     | identifier_list ':' type {
-        set_identifier_type_at_symbol_table($3, identifier_list_vect);
+        set_identifier_type_at_symbol_table($3, identifier_list);
+        parameters_list.splice(parameters_list.end(), identifier_list);
+        identifier_list.clear();
     }
 ;
 compound_statement:
@@ -175,7 +178,7 @@ variable:
     | VAR '[' expr ']' 
 ;
 procedure_statement:
-    PROCEDURE
+    PROCEDURE {append_command_to_stream("call.i", "#" + symtable[$1].name, "&" + symtable[$1].name);}
     | PROCEDURE '(' expression_list ')' {
         auto write_id = lookup_name("write");
         auto read_id = lookup_name("read");
@@ -215,7 +218,16 @@ expr:
     | NUM_INT { symtable[$1].variable_type = INTEGER; }
     | NUM_REAL { symtable[$1].variable_type = REAL; }
     | VAR { ; }
-    | FUNCTION
+    | FUNCTION {
+        auto tmp_index = add_temporary_variable(symtable[$1].variable_type);
+        append_command_to_stream("push.i", "#" + symtable[tmp_index].get_variable_to_asm(), "&" + symtable[tmp_index].name);
+        append_command_to_stream("call.i", "#" + symtable[$1].name, "&" + symtable[$1].name);
+        append_command_to_stream("incsp.i", "#4", "4");
+        $$ = tmp_index;
+    }
+    | FUNCTION '(' expression_list ')' {
+
+    }
 ;
 %%
 

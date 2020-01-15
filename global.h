@@ -5,6 +5,7 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include <list>
 #include <stack>
 #include <iostream>
 #include <cassert>
@@ -58,7 +59,7 @@ void term () ;
 void factor () ;
 void match (int t) ;
 
-void set_identifier_type_at_symbol_table(int type, std::vector<int> &identifier_list_vect);
+void set_identifier_type_at_symbol_table(int type, std::list<int> &identifier_list);
 std::tuple<int, int> manage_assignment_operation_type_conversion(int input_1, int input_2);
 std::tuple<int, int> manage_arithmetical_operation_type_conversion(int input_1, int input_2);
 void emit (int t, int tval) ;
