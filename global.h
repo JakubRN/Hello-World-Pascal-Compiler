@@ -16,6 +16,14 @@
 #include "parser.h"
 
 struct entry;
+
+enum class data_type {
+    integer,
+    real,
+    array_integer,
+    array_real
+};
+
 //#define NDEBUG
 
 #define NONE -1
@@ -35,6 +43,7 @@ extern std::vector<entry> symtable;
 extern int relative_stack_pointer;
 extern bool global_scope;
 
+
 void generate_assign_op(int left_operand, int right_operand);
 void append_command_to_stream(std::string command, std::string parameters = "", std::string parameters_string = "", std::stringstream &output = output_string_stream);
 int generate_arithmetic_operation(std::string command, int index_operand_1, int index_operand_2);
@@ -43,8 +52,8 @@ void generate_label(std::string label_name, std::stringstream &output = output_s
 void generate_jump(std::string label_name, std::stringstream &output = output_string_stream);
 
 void set_memory_offset(entry &element);
-void set_variable_at_symbol_table(int index, int size, int var_type);
-int add_temporary_variable(int type);
+void set_variable_at_symbol_table(int index, int size, data_type var_type);
+int add_temporary_variable(data_type type);
 void dump_symbol_table();
 int insert_name (std::string s, int tok);
 int lookup_name (std::string s);
@@ -59,7 +68,10 @@ void term () ;
 void factor () ;
 void match (int t) ;
 
+
+data_type get_data_type(int token);
+void push_arguments_list(int procedure_id, std::list<int> &expression_list);
 void set_identifier_type_at_symbol_table(int type, std::list<int> &identifier_list);
-std::tuple<int, int> manage_assignment_operation_type_conversion(int input_1, int input_2);
+int manage_assignment_operation_type_conversion(data_type left_type, int input_2);
 std::tuple<int, int> manage_arithmetical_operation_type_conversion(int input_1, int input_2);
 void emit (int t, int tval) ;

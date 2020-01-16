@@ -28,31 +28,31 @@ void set_memory_offset(entry &element) {
     }
     element.memory_offset = curr_offset;
 }
-void set_variable_at_symbol_table(int index, int size, int var_type) {
+void set_variable_at_symbol_table(int index, int size, data_type var_type) {
     if( global_scope) set_memory_offset(symtable[index]);
     else {
         symtable[index].is_global = false;
-        symtable[index].memory_offset = relative_stack_pointer;
         relative_stack_pointer -= size;
+        symtable[index].memory_offset = relative_stack_pointer;
     }
     symtable[index].size = size;
     symtable[index].token = VAR;
-    symtable[index].variable_type = var_type;
+    symtable[index].type.variable_type = var_type;
 }
 
-int add_temporary_variable(int type) {
+int add_temporary_variable(data_type type) {
     auto tmp_variable_name = std::string("$t") + std::to_string(number_of_temporary_variables++);
     auto index = insert_name(tmp_variable_name, VAR);
-    if(type == INTEGER) {
-        set_variable_at_symbol_table(index, _INT_SIZE, INTEGER);
+    if(type == data_type::integer) {
+        set_variable_at_symbol_table(index, _INT_SIZE, type);
     }
-    else if(type == REAL) {
-        set_variable_at_symbol_table(index, _REAL_SIZE, REAL);
+    else if(type == data_type::real) {
+        set_variable_at_symbol_table(index, _REAL_SIZE, type);
     }
     else {
         yyerror("wrong temporary variable type");
         //asssuming real
-        set_variable_at_symbol_table(index, _REAL_SIZE, REAL);
+        set_variable_at_symbol_table(index, _REAL_SIZE, data_type::real);
     }
     return index;
 }
@@ -65,20 +65,17 @@ void dump_symbol_table() {
         switch (curr_entry.token)
         {
         case VAR:
-            if(curr_entry.variable_type == INTEGER){
+            if(curr_entry.type.variable_type == data_type::integer){
                 std::cout << " integer variable, value: " << curr_entry.name;
                 std::cout << " Offset: " << curr_entry.memory_offset << ", size: " << curr_entry.size;
             }
-            else if(curr_entry.variable_type == REAL) {
+            else if(curr_entry.type.variable_type == data_type::real) {
                 std::cout << " real variable, value: " << curr_entry.name;
                 std::cout << " Offset: " << curr_entry.memory_offset << ", size: " << curr_entry.size;
             }
             break;
-        case NUM_INT:
-            std::cout << " integer constant, value: " << curr_entry.name;
-            break;
-        case NUM_REAL:
-            std::cout << " real constant, value: " << curr_entry.name;
+        case NUM:
+            std::cout << "constant, value: " << curr_entry.name;
             break;
         case LABEL:
             std::cout << " label: " << curr_entry.name;
@@ -88,10 +85,10 @@ void dump_symbol_table() {
             break;
         case FUNCTION:
             std::cout << " function: " << curr_entry.name ;
-            if(curr_entry.variable_type == INTEGER){
+            if(curr_entry.type.variable_type == data_type::integer){
                 std::cout << " returns int";
             }
-            else if(curr_entry.variable_type == REAL) {
+            else if(curr_entry.type.variable_type == data_type::real) {
                 std::cout << " returns real " << curr_entry.name;
             }
             break;

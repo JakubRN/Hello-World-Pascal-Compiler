@@ -12,11 +12,11 @@ void append_command_to_stream(std::string command, std::string parameters, std::
 }
 
 void generate_assign_op(int left_operand, int right_operand){
-    std::tie(left_operand, right_operand) = manage_assignment_operation_type_conversion(left_operand, right_operand);
+    right_operand = manage_assignment_operation_type_conversion(symtable[left_operand].type.variable_type, right_operand);
     std::string command;
-    if(symtable[left_operand].variable_type == INTEGER)
+    if(symtable[left_operand].type.variable_type == data_type::integer)
         command = "mov.i";
-    else if(symtable[left_operand].variable_type == REAL)
+    else if(symtable[left_operand].type.variable_type == data_type::real)
         command = "mov.r";
     generate_command(command, right_operand, left_operand);
 }
@@ -24,13 +24,13 @@ void generate_assign_op(int left_operand, int right_operand){
 int generate_arithmetic_operation(std::string command, int index_operand_1, int index_operand_2) {
     auto [index_input_1, index_input_2] = manage_arithmetical_operation_type_conversion(index_operand_1, index_operand_2);
         int output_index;
-        if(symtable[index_input_1].variable_type == REAL) {
+        if(symtable[index_input_1].type.variable_type == data_type::real) {
             command += ".r";
-            output_index = add_temporary_variable(REAL);
+            output_index = add_temporary_variable(data_type::real);
         }
         else {
             command += ".i";
-            output_index = add_temporary_variable(INTEGER);
+            output_index = add_temporary_variable(data_type::integer);
         }
         generate_command(command, index_input_1, index_input_2, output_index);
         return output_index;

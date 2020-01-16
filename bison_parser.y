@@ -5,6 +5,7 @@
 #include "entry.h"
 
 int relative_stack_pointer;
+size_t symbol_table_size = 0;
 bool global_scope = true;
 std::list<int> identifier_list;
 std::list<int> parameters_list;
@@ -35,8 +36,7 @@ std::stack<entry> module_stack;
 %token VAR
 %token LABEL
 
-%token NUM_INT
-%token NUM_REAL
+%token NUM
 %token ID
 %token DIV 
 %token MOD 
@@ -77,7 +77,7 @@ declarations:
 ;
 type:
     standard_type
-    | ARRAY '[' NUM_INT '.' '.' NUM_INT ']' 
+    | ARRAY '[' NUM '.' '.' NUM ']' 
 standard_type:
     INTEGER
     | REAL
@@ -90,45 +90,52 @@ subprogram_declaration:
     subprogram_head declarations compound_statement {
         generate_command("leave");
         generate_command("return");
-        auto number_to_append = std::to_string(abs(relative_stack_pointer) - 4);
+        auto number_to_append = std::to_string(abs(relative_stack_pointer));
         append_command_to_stream("enter.i", "#" + number_to_append, number_to_append);
         output_string_stream << single_module_output.str();
         single_module_output.str(std::string());
+        if(symbol_table_size != 0)
+            dump_symbol_table();
+            symtable.erase(symtable.begin() + symbol_table_size, symtable.end());
     }
 ;
 subprogram_head:
-    FUNCTION ID arguments ':' standard_type ';' {
-        //Expects you to push return variable last
-        symtable[$2].is_global = false;
-        symtable[$2].is_reference = true;
-        symtable[$2].token = FUNCTION;
-        symtable[$2].memory_offset = 8;
-        symtable[$2].variable_type = $5;
-        symtable[$2].arguments_types = identifier_list;
-        relative_stack_pointer = -4;
-        std::cout << "memory offset: " << symtable[$2].memory_offset << std::endl;
-        generate_label(symtable[$2].name);
+    FUNCTION ID {symbol_table_size = symtable.size();} arguments ':' standard_type ';' {
+            //Expects you to push return variable last
+            symtable[$2].is_global = false;
+            symtable[$2].is_reference = true;
+            symtable[$2].token = FUNCTION;
+            symtable[$2].memory_offset = 8;
 
-        identifier_list.clear();
+            symtable[$2].type.variable_type = get_data_type($6);
+            relative_stack_pointer = 0;
+            generate_label(symtable[$2].name);
+            for(const auto &symbol_table_index : parameters_list) {
+                symtable[$2].arguments_types.push_back( {symtable[symbol_table_index].type.variable_type, 0 } );
+            }
+            parameters_list.clear();
         }
-    | PROCEDURE ID arguments ';' { 
-        symtable[$2].is_global = false;
-        symtable[$2].token = PROCEDURE;
-        relative_stack_pointer = -4;
-        generate_label(symtable[$2].name);
-        identifier_list.clear();
+    | PROCEDURE ID {symbol_table_size = symtable.size();} arguments ';' { 
+            symtable[$2].is_global = false;
+            symtable[$2].token = PROCEDURE;
+            relative_stack_pointer = 0;
+            generate_label(symtable[$2].name);
+            for(const auto &symbol_table_index : parameters_list) {
+                symtable[$2].arguments_types.push_back( {symtable[symbol_table_index].type.variable_type, 0 } );
+            }
+            parameters_list.clear();
+            
         }
 ;
 arguments:
     '(' parameter_list ')' {
-        parameters_list.reverse();
-        relative_stack_pointer = 12;
+        relative_stack_pointer = parameters_list.size()*4 + 8;
         for(const auto &symbol_table_index : parameters_list) {
             assert(symtable[symbol_table_index].is_global == false);
             symtable[symbol_table_index].memory_offset = relative_stack_pointer;
             symtable[symbol_table_index].size = 4;
             symtable[symbol_table_index].is_reference=true;
-            relative_stack_pointer += 4;
+            relative_stack_pointer -= 4;
         }
     }
     |
@@ -182,18 +189,36 @@ procedure_statement:
     | PROCEDURE '(' expression_list ')' {
         auto write_id = lookup_name("write");
         auto read_id = lookup_name("read");
-        if($1 == write_id || $1 == read_id) {
-            if(symtable[$3].variable_type == REAL)
-                generate_command("write.r", $3);
-            else if(symtable[$3].variable_type == INTEGER)
-                generate_command("write.i", $3);
-            else yyerror("wrong type of variable to write: expecting real or int");
+        if($1 == write_id) {
+            for(auto &elem : expression_list) {
+                if(symtable[elem].type.variable_type == data_type::real)
+                    generate_command("write.r", elem);
+                else if(symtable[elem].type.variable_type == data_type::integer)
+                    generate_command("write.i", elem);
+                else yyerror("wrong type of variable to write: expecting real or int");
+            }
         }
+        else if ($1 == read_id) {
+            for(auto &elem : expression_list) {
+                if(symtable[elem].type.variable_type == data_type::real)
+                    generate_command("read.r", elem);
+                else if(symtable[elem].type.variable_type == data_type::integer)
+                    generate_command("read.i", elem);
+                else yyerror("wrong type of variable to read: expecting real or int");
+            }
+        }
+        else {
+            push_arguments_list($1, expression_list);
+            append_command_to_stream("call.i", "#" + symtable[$1].name, "&" + symtable[$1].name);
+            auto stack_ptr = 4 + symtable[$1].arguments_types.size() * 4;
+            append_command_to_stream("incsp.i", "#" + std::to_string(stack_ptr), std::to_string(stack_ptr));
+        }
+        expression_list.clear();
     }
 ;
 expression_list:
-    expr
-    | expression_list ',' expr
+    expr {expression_list.push_back($1);}
+    | expression_list ',' expr {expression_list.push_back($3);}
 ;
 expr:
     expr '<' expr { if($1 < $3) printf("true"); else printf("false"); }
@@ -215,17 +240,24 @@ expr:
     | '+' expr %prec UPLUS  { }
 
     | '(' expr ')' { ; }
-    | NUM_INT { symtable[$1].variable_type = INTEGER; }
-    | NUM_REAL { symtable[$1].variable_type = REAL; }
+    | NUM
     | VAR { ; }
     | FUNCTION {
-        auto tmp_index = add_temporary_variable(symtable[$1].variable_type);
+        auto tmp_index = add_temporary_variable(symtable[$1].type.variable_type);
         append_command_to_stream("push.i", "#" + symtable[tmp_index].get_variable_to_asm(), "&" + symtable[tmp_index].name);
         append_command_to_stream("call.i", "#" + symtable[$1].name, "&" + symtable[$1].name);
         append_command_to_stream("incsp.i", "#4", "4");
         $$ = tmp_index;
     }
     | FUNCTION '(' expression_list ')' {
+        push_arguments_list($1, expression_list);
+        auto tmp_index = add_temporary_variable(symtable[$1].type.variable_type);
+        append_command_to_stream("push.i", symtable[tmp_index].get_variable_to_asm(true), "&" + symtable[tmp_index].name);
+        append_command_to_stream("call.i", "#" + symtable[$1].name, "&" + symtable[$1].name);
+        auto stack_ptr = 4 + symtable[$1].arguments_types.size() * 4;
+        append_command_to_stream("incsp.i", "#" + std::to_string(stack_ptr), std::to_string(stack_ptr));
+        $$ = tmp_index;
+        expression_list.clear();
 
     }
 ;

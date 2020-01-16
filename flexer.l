@@ -4,7 +4,7 @@
 #include "entry.h"
 #include "parser.h"
 int lineno = 1;
-int install(int ID_name);
+int lookup_or_install(int ID_name);
 // int install_num();
 %}
 delim       [ \t]
@@ -40,9 +40,13 @@ opsign      [\+\-\*\/\(\)\;\<\>\=\.\:\[\]\,]
 (program)   {return PROGRAM;}
 (var)       {return VAR;}
 (of)        {return OF;}
-{num_int}        {yylval = install(NUM_INT); return(symtable[yylval].token);}
-{num_real}       {yylval = install(NUM_REAL); return(symtable[yylval].token);}
-{id}        {yylval = install(ID);  return(symtable[yylval].token);}
+{num_int}        {  yylval = lookup_or_install(NUM);
+                    symtable[yylval].type.variable_type=data_type::integer;
+                    return(symtable[yylval].token);}
+{num_real}       {yylval = lookup_or_install(NUM); 
+                symtable[yylval].type.variable_type=data_type::real;
+                return(symtable[yylval].token);}
+{id}        {yylval = lookup_or_install(ID);  return(symtable[yylval].token);}
 {opsign}    {return(yytext[0]);}
 %%
 //old relop that detects whole relative operations
@@ -51,7 +55,7 @@ opsign      [\+\-\*\/\(\)\;\<\>\=\.\:\[\]\,]
 /* procedure to install the lexeme, whose first character is pointed by yytext
 and whose length is yyleng, into the symbol table and return a pointer thereto */
 
-int install(int ID_name) {
+int lookup_or_install(int ID_name) {
      int p = lookup_name (yytext);
         if (p == 0){
             p = insert_name (yytext, ID_name);
