@@ -177,47 +177,37 @@ statement:
     | unmatched_statement
 ;
 matched_statement:
-    _IF expr {
-        auto if_false = add_free_label();
-        std::string command = "je";
-        symtable[$2].type.variable_type == data_type::real ? command+=".r" : command += ".i";
-        generate_command(command, $2, index_of_zero, if_false);
-        $2 = if_false;
-    } _THEN matched_statement {
+    if_expr _THEN matched_statement {
         auto if_true = add_free_label();
         generate_jump(symtable[if_true].name);
-        generate_label(symtable[$2].name);
-        $5 = if_true;
+        generate_label(symtable[$1].name);
+        $3 = if_true;
     } _ELSE matched_statement {
-        generate_label(symtable[$5].name);
+        generate_label(symtable[$3].name);
     }
     | other_statement
 ;
 unmatched_statement:
+    if_expr _THEN statement {
+        generate_label(symtable[$1].name);
+    }
+    | if_expr _THEN matched_statement {
+        auto if_true = add_free_label();
+        generate_jump(symtable[if_true].name);
+        generate_label(symtable[$1].name);
+        $3 = if_true;
+    } _ELSE unmatched_statement {
+        generate_label(symtable[$3].name);
+    }
+;
+if_expr: 
     _IF expr {
         auto if_false = add_free_label();
         std::string command = "je";
         symtable[$2].type.variable_type == data_type::real ? command+=".r" : command += ".i";
         generate_command(command, $2, index_of_zero, if_false);
-        $2 = if_false;
-    } _THEN statement {
-        generate_label(symtable[$2].name);
+        $$ = if_false;
     }
-    | _IF expr {
-        auto if_false = add_free_label();
-        std::string command = "je";
-        symtable[$2].type.variable_type == data_type::real ? command+=".r" : command += ".i";
-        generate_command(command, $2, index_of_zero, if_false);
-        $2 = if_false;
-    } _THEN matched_statement {
-        auto if_true = add_free_label();
-        generate_jump(symtable[if_true].name);
-        generate_label(symtable[$2].name);
-        $5 = if_true;
-    } _ELSE unmatched_statement {
-        generate_label(symtable[$5].name);
-    }
-;
 other_statement:
     variable ASSIGN_OP expr { generate_assign_op($1, $3); }
     | procedure_statement
