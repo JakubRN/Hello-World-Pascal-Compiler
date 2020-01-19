@@ -177,13 +177,8 @@ statement:
     | unmatched_statement
 ;
 matched_statement:
-    if_expr _THEN matched_statement {
-        auto if_true = add_free_label();
-        generate_jump(symtable[if_true].name);
-        generate_label(symtable[$1].name);
-        $3 = if_true;
-    } _ELSE matched_statement {
-        generate_label(symtable[$3].name);
+    if_expr then_expr _ELSE matched_statement {
+        generate_label(symtable[$2].name);
     }
     | other_statement
 ;
@@ -191,13 +186,8 @@ unmatched_statement:
     if_expr _THEN statement {
         generate_label(symtable[$1].name);
     }
-    | if_expr _THEN matched_statement {
-        auto if_true = add_free_label();
-        generate_jump(symtable[if_true].name);
-        generate_label(symtable[$1].name);
-        $3 = if_true;
-    } _ELSE unmatched_statement {
-        generate_label(symtable[$3].name);
+    | if_expr then_expr _ELSE unmatched_statement {
+        generate_label(symtable[$2].name);
     }
 ;
 if_expr: 
@@ -208,6 +198,15 @@ if_expr:
         generate_command(command, $2, index_of_zero, if_false);
         $$ = if_false;
     }
+    ;
+then_expr:
+    _THEN matched_statement {
+        auto if_true = add_free_label();
+        generate_jump(symtable[if_true].name);
+        generate_label(symtable[$0].name);
+        $$ = if_true;
+    }
+    ;
 other_statement:
     variable ASSIGN_OP expr { generate_assign_op($1, $3); }
     | procedure_statement
