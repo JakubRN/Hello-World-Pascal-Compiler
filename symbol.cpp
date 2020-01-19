@@ -4,7 +4,9 @@
 #include "entry.h"
 
 std::vector<entry> symtable;
+int label_index = 1;
 int number_of_temporary_variables = 0;
+
 int lookup_name (std::string s) {
   for (int i = symtable.size() - 1; i >= 0 ; --i) {
     if (symtable[i].name.compare(s) == 0)
@@ -12,7 +14,7 @@ int lookup_name (std::string s) {
   }
   return 0;
 }
-int insert_name (std::string s, int tok)  {
+int insert_name (std::string s, entry_type tok)  {
     symtable.emplace_back(
         s,
         tok
@@ -36,13 +38,13 @@ void set_variable_at_symbol_table(int index, int size, data_type var_type) {
         symtable[index].memory_offset = relative_stack_pointer;
     }
     symtable[index].size = size;
-    symtable[index].token = VAR;
+    symtable[index].token = entry_type::variable;
     symtable[index].type.variable_type = var_type;
 }
 
 int add_temporary_variable(data_type type) {
     auto tmp_variable_name = std::string("$t") + std::to_string(number_of_temporary_variables++);
-    auto index = insert_name(tmp_variable_name, VAR);
+    auto index = insert_name(tmp_variable_name, entry_type::variable);
     if(type == data_type::integer) {
         set_variable_at_symbol_table(index, _INT_SIZE, type);
     }
@@ -57,6 +59,14 @@ int add_temporary_variable(data_type type) {
     return index;
 }
 
+int add_free_label() {
+    auto label_name = "lab" + std::to_string(label_index++);
+    auto lookup_index = lookup_name(label_name);
+    if(lookup_index) {
+        label_name = "collision_avoidance_" + label_name;
+    }
+    return insert_name(label_name, entry_type::label);
+}
 void dump_symbol_table() {
     for (size_t i = 0; i < symtable.size(); i++)
     {
@@ -64,7 +74,7 @@ void dump_symbol_table() {
         auto & curr_entry = symtable[i];
         switch (curr_entry.token)
         {
-        case VAR:
+        case entry_type::variable:
             if(curr_entry.type.variable_type == data_type::integer){
                 std::cout << " integer variable, value: " << curr_entry.name;
                 std::cout << " Offset: " << curr_entry.memory_offset << ", size: " << curr_entry.size;
@@ -74,16 +84,16 @@ void dump_symbol_table() {
                 std::cout << " Offset: " << curr_entry.memory_offset << ", size: " << curr_entry.size;
             }
             break;
-        case NUM:
+        case entry_type::number:
             std::cout << "constant, value: " << curr_entry.name;
             break;
-        case LABEL:
+        case entry_type::label:
             std::cout << " label: " << curr_entry.name;
             break;
-        case PROCEDURE:
+        case entry_type::procedure:
             std::cout << " procedure: " << curr_entry.name;
             break;
-        case FUNCTION:
+        case entry_type::function:
             std::cout << " function: " << curr_entry.name ;
             if(curr_entry.type.variable_type == data_type::integer){
                 std::cout << " returns int";

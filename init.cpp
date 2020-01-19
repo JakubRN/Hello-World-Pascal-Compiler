@@ -4,14 +4,14 @@
 void
 init () {
     entry keywords[] = { 
-        {"read", PROCEDURE}, 
-        {"write", PROCEDURE}, 
-        {"", 0} 
+        {"0", entry_type::number},
+        {"1", entry_type::number},
+        {"read", entry_type::procedure}, 
+        {"write", entry_type::procedure}
     };
 
-    struct entry *p;
-    for (p = keywords; p->token; p++)
-    insert_name (p->name, p->token);
+    for (auto &p : keywords)
+        insert_name (p.name, p.token);
 }
 
 

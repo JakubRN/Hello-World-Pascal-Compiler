@@ -22,7 +22,7 @@ void generate_assign_op(int left_operand, int right_operand){
 }
 
 int generate_arithmetic_operation(std::string command, int index_operand_1, int index_operand_2) {
-    auto [index_input_1, index_input_2] = manage_arithmetical_operation_type_conversion(index_operand_1, index_operand_2);
+    auto [index_input_1, index_input_2] = manage_type_promotion(index_operand_1, index_operand_2);
         int output_index;
         if(symtable[index_input_1].type.variable_type == data_type::real) {
             command += ".r";
@@ -68,4 +68,20 @@ void generate_command(std::string command_name, int first_arg, int second_arg, i
 void generate_jump(std::string label_name, std::stringstream &output) {
     
     append_command_to_stream("jump.i", "#" + label_name, "#" + label_name, output);
+}
+
+
+int generate_relop(std::string command, int operand_1, int operand_2) {
+    std::tie(operand_1, operand_2) = manage_type_promotion(operand_1, operand_2);
+    symtable[operand_1].type.variable_type == data_type::real ? command+=".r" : command += ".i";
+    auto if_true = add_free_label();
+    auto if_false = add_free_label();
+    generate_command(command, operand_1, operand_2, if_true);
+    auto result = add_temporary_variable(data_type::integer);
+    generate_assign_op(result, index_of_zero);
+    generate_jump(symtable[if_false].name);
+    generate_label(symtable[if_true].name);
+    generate_assign_op(result, index_of_one);
+    generate_label(symtable[if_false].name);
+    return result;
 }

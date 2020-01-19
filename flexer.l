@@ -4,7 +4,7 @@
 #include "entry.h"
 #include "parser.h"
 int lineno = 1;
-int lookup_or_install(int ID_name);
+int lookup_or_install(entry_type ID_name);
 // int install_num();
 %}
 delim       [ \t]
@@ -24,14 +24,14 @@ opsign      [\+\-\*\/\(\)\;\<\>\=\.\:\[\]\,]
 (<>)        {return NOT_EQUAL;}
 (<=)        {return LESS_THAN_OR_EQUAL;}
 (>=)        {return MORE_THAN_OR_EQUAL;}
-(if)        {return __IF;}
-(then)      {return __THEN;}
-(else)      {return __ELSE;}
+(if)        {return _IF;}
+(then)      {return _THEN;}
+(else)      {return _ELSE;}
 (:=)        {return ASSIGN_OP;}
 (div)       {return DIV;}
 (mod)       {return MOD;}
-(begin)     {return __BEGIN;}
-(end)       {return __END;}
+(begin)     {return _BEGIN;}
+(end)       {return _END;}
 (function)  {return FUNCTION;}
 (procedure) {return PROCEDURE;}
 (array)     {yylval = ARRAY; return ARRAY;}
@@ -40,13 +40,16 @@ opsign      [\+\-\*\/\(\)\;\<\>\=\.\:\[\]\,]
 (program)   {return PROGRAM;}
 (var)       {return VAR;}
 (of)        {return OF;}
-{num_int}        {  yylval = lookup_or_install(NUM);
+(or)        {return OR;}
+(and)        {return AND;}
+(not)        {return NOT;}
+{num_int}        {  yylval = lookup_or_install(entry_type::number);
                     symtable[yylval].type.variable_type=data_type::integer;
-                    return(symtable[yylval].token);}
-{num_real}       {yylval = lookup_or_install(NUM); 
+                    return NUM;}
+{num_real}       {yylval = lookup_or_install(entry_type::number); 
                 symtable[yylval].type.variable_type=data_type::real;
-                return(symtable[yylval].token);}
-{id}        {yylval = lookup_or_install(ID);  return(symtable[yylval].token);}
+                return NUM;}
+{id}        {yylval = lookup_or_install(entry_type::uninitialized);  return ID;}
 {opsign}    {return(yytext[0]);}
 %%
 //old relop that detects whole relative operations
@@ -55,7 +58,7 @@ opsign      [\+\-\*\/\(\)\;\<\>\=\.\:\[\]\,]
 /* procedure to install the lexeme, whose first character is pointed by yytext
 and whose length is yyleng, into the symbol table and return a pointer thereto */
 
-int lookup_or_install(int ID_name) {
+int lookup_or_install(entry_type ID_name) {
      int p = lookup_name (yytext);
         if (p == 0){
             p = insert_name (yytext, ID_name);

@@ -2,6 +2,27 @@
 #include "parser.h"
 #include "entry.h"
 
+
+std::string get_entry_type_string(int index) {
+    switch (symtable[index].token)
+    {
+    case entry_type::function :
+        return "function";
+    case entry_type::procedure :
+        return "procedure";
+    case entry_type::variable :
+        return "variable";
+    case entry_type::number :
+        return "number";
+    case entry_type::uninitialized :
+        return "uninitialized";
+    case entry_type::label :
+        return "label";
+    default:
+        return "unknown";
+    }
+}
+
 data_type get_data_type(int token) {
     if(token == INTEGER) return data_type::integer;
     else if(token == REAL) return data_type::real;
@@ -40,7 +61,7 @@ void push_arguments_list(int procedure_id, std::list<int> &expression_list) {
     auto function_arg_pointer = symtable[procedure_id].arguments_types.begin();
     for(unsigned current_parameter = 1; current_parameter <= symtable[procedure_id].arguments_types.size(); ++current_parameter) {
         int expr_id = *expr_list_pointer;
-        if(symtable[expr_id].token == NUM) {
+        if(symtable[expr_id].token == entry_type::number) {
             auto new_expr_id=add_temporary_variable(symtable[expr_id].type.variable_type);
             generate_assign_op(new_expr_id, expr_id);
             expr_id = new_expr_id;
@@ -72,7 +93,7 @@ int manage_assignment_operation_type_conversion(data_type left_type, int input_2
     return -1;
 }
 
-std::tuple<int, int> manage_arithmetical_operation_type_conversion(int input_1, int input_2) {
+std::tuple<int, int> manage_type_promotion(int input_1, int input_2) {
 
     if(symtable[input_1].type.variable_type == symtable[input_2].type.variable_type) {
         return {input_1, input_2};

@@ -53,6 +53,7 @@ int main (int argc, char *argv[]) {
 
     output_file_stream << output_string_stream.rdbuf();
     dump_symbol_table();
+    yylex_destroy();
     exit (0);
 }
 
