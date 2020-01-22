@@ -22,6 +22,15 @@ int insert_name (std::string s, entry_type tok)  {
     return symtable.size() - 1;
 }
 
+int insert_dummy_number (int n)  {
+    symtable.emplace_back(
+        std::to_string(n),
+        entry_type::number
+    );
+    return symtable.size() - 1;
+}
+
+
 void set_memory_offset(entry &element) {
     int curr_offset = 0;
     for(auto &curr_entry : symtable) {
@@ -40,6 +49,25 @@ void set_variable_at_symbol_table(int index, int size, data_type var_type) {
     symtable[index].size = size;
     symtable[index].token = entry_type::variable;
     symtable[index].type.variable_type = var_type;
+}
+
+void set_array_at_symbol_table(int index, variable_info array_info) {
+    int memory_allocation_size;
+    assert(array_info.variable_type == data_type::array_integer || array_info.variable_type == data_type:: array_real);
+    if(array_info.variable_type == data_type::array_integer)
+        memory_allocation_size = _INT_SIZE * array_info.number_of_elements;
+    else if(array_info.variable_type == data_type:: array_real)
+        memory_allocation_size = _REAL_SIZE * array_info.number_of_elements;
+    
+    if(global_scope) set_memory_offset(symtable[index]);
+    else {
+        symtable[index].is_global = false;
+        relative_stack_pointer -= memory_allocation_size;
+        symtable[index].memory_offset = relative_stack_pointer;
+    }
+    symtable[index].size = memory_allocation_size;
+    symtable[index].token = entry_type::variable;
+    symtable[index].type = array_info;
 }
 
 int add_temporary_variable(data_type type) {
@@ -72,6 +100,10 @@ void dump_symbol_table() {
     {
         std::cout << i << ". ";
         auto & curr_entry = symtable[i];
+        if(curr_entry.is_global)
+            std::cout << "Global: ";
+        else 
+            std::cout << "Local: ";
         switch (curr_entry.token)
         {
         case entry_type::variable:
@@ -82,6 +114,14 @@ void dump_symbol_table() {
             else if(curr_entry.type.variable_type == data_type::real) {
                 std::cout << " real variable, value: " << curr_entry.name;
                 std::cout << " Offset: " << curr_entry.memory_offset << ", size: " << curr_entry.size;
+            }
+            else if(curr_entry.type.variable_type == data_type::array_integer) {
+                std::cout << " integer array, value: " << curr_entry.name;
+                std::cout << " Offset: " << curr_entry.memory_offset << ", size: " << curr_entry.size << ", number of elements: " << curr_entry.type.number_of_elements;
+            }
+            else if(curr_entry.type.variable_type == data_type::array_real) {
+                std::cout << " real array, value: " << curr_entry.name;
+                std::cout << " Offset: " << curr_entry.memory_offset << ", size: " << curr_entry.size << ", number of elements: " << curr_entry.type.number_of_elements;
             }
             break;
         case entry_type::number:

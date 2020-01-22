@@ -1,14 +1,22 @@
 #include "global.h"
 #include "entry.h"
 
-void append_command_to_stream(std::string command, std::string parameters, std::string parameters_string, std::stringstream &output) {
-     output  << std::setw(8) << " ";
+void write_to_valid_stringstream(std::string command, std::string parameters, std::string parameters_string, std::stringstream &output) {
+    output  << std::setw(8) << " ";
     std::size_t command_width = 8;
     if(command.length() >= command_width) command_width = (command.length() + 1);
     output  << std::setw(command_width) << std::left << (command + " ");
     output  << std::setw(32 - command_width) << std::left << parameters;
     output  << ";" << std::setw(8) << std::left << (command + " ");
     output  << std::setw(24) << std::left << parameters_string << std::endl;
+}
+
+void append_command_to_stream(std::string command, std::string parameters, std::string parameters_string) {
+    if( global_scope)
+        write_to_valid_stringstream(command, parameters, parameters_string, output_string_stream);
+    else
+       write_to_valid_stringstream(command, parameters, parameters_string, single_module_output);
+
 }
 
 void generate_assign_op(int left_operand, int right_operand){
@@ -36,38 +44,35 @@ int generate_arithmetic_operation(std::string command, int index_operand_1, int 
         return output_index;
 }
 
-void generate_label(std::string label_name, std::stringstream &output) {
-    output << label_name << ':' << std::endl;
+void generate_label(std::string label_name) {
+    if(global_scope)
+        output_string_stream << label_name << ':' << std::endl;
+    else
+        single_module_output << label_name << ':' << std::endl;
 };
 
-void generate_command(std::string command_name, int first_arg, int second_arg, int third_arg) {
+void generate_command(std::string command_name, int first_arg, int second_arg, int third_arg, 
+                        bool pass_ref_1, bool pass_ref_2, bool pass_ref_3) {
     std::stringstream comments_with_names;
     std::stringstream tmp_stringstream;
     if(first_arg != -1) {
-        auto first_arg_str = symtable[first_arg].get_variable_to_asm();
-        tmp_stringstream << first_arg_str;
-        comments_with_names  << symtable[first_arg].name;
+        tmp_stringstream << symtable[first_arg].get_variable_to_asm(pass_ref_1);
+        comments_with_names  << symtable[first_arg].get_name_to_asm(pass_ref_1);
     }
     if(second_arg != -1) {
-        auto second_arg_str = symtable[second_arg].get_variable_to_asm();
-        tmp_stringstream << "," << second_arg_str;
-        comments_with_names <<  "," << symtable[second_arg].name;
+        tmp_stringstream << "," << symtable[second_arg].get_variable_to_asm(pass_ref_2);
+        comments_with_names <<  "," << symtable[second_arg].get_name_to_asm(pass_ref_2);
     }
     if(third_arg != -1) {
-        auto third_arg_str = symtable[third_arg].get_variable_to_asm();
-        tmp_stringstream << "," << third_arg_str;
-        comments_with_names <<  "," << symtable[third_arg].name;
+        tmp_stringstream << "," << symtable[third_arg].get_variable_to_asm(pass_ref_3);
+        comments_with_names <<  "," << symtable[third_arg].get_name_to_asm(pass_ref_3);
     }
-    if(global_scope)
-        append_command_to_stream(command_name, tmp_stringstream.str(), comments_with_names.str());
-    else
-        append_command_to_stream(command_name, tmp_stringstream.str(), comments_with_names.str(), single_module_output);
+    append_command_to_stream(command_name, tmp_stringstream.str(), comments_with_names.str());
 };
 
 
-void generate_jump(std::string label_name, std::stringstream &output) {
-    
-    append_command_to_stream("jump.i", "#" + label_name, "#" + label_name, output);
+void generate_jump(std::string label_name) {
+    append_command_to_stream("jump.i", "#" + label_name, "#" + label_name);
 }
 
 

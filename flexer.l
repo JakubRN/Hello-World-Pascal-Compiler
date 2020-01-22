@@ -27,13 +27,15 @@ opsign      [\+\-\*\/\(\)\;\<\>\=\.\:\[\]\,]
 (if)        {return _IF;}
 (then)      {return _THEN;}
 (else)      {return _ELSE;}
+(while)     {return WHILE;}
+(do)        {return DO;}
 (:=)        {return ASSIGN_OP;}
 (div)       {return DIV;}
 (mod)       {return MOD;}
 (begin)     {return _BEGIN;}
 (end)       {return _END;}
-(function)  {return FUNCTION;}
-(procedure) {return PROCEDURE;}
+(function)  {yylval = FUNCTION; return FUNCTION;}
+(procedure) {yylval = PROCEDURE; return PROCEDURE;}
 (array)     {yylval = ARRAY; return ARRAY;}
 (integer)   {yylval = INTEGER; return INTEGER;}
 (real)      {yylval = REAL; return REAL;}

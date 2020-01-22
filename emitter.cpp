@@ -40,7 +40,7 @@ void set_identifier_type_at_symbol_table(int type, std::list<int> &identifier_li
             set_variable_at_symbol_table(symbol_table_index, _REAL_SIZE, data_type::real);
         }
         else if(type == ARRAY) {
-            std::cout << symtable[symbol_table_index].name  << " is array" << std::endl;
+            set_array_at_symbol_table(symbol_table_index, array_data);
         }
         else {
             std::cout << "identifiers are unknown" << std::endl;
@@ -69,6 +69,10 @@ void push_arguments_list(int procedure_id, std::list<int> &expression_list) {
         if(symtable[expr_id].type.variable_type != (*function_arg_pointer).variable_type) {
             yyerror(("argument " + std::to_string(current_parameter) + " passed to function " + symtable[procedure_id].name + " has incorrect type").c_str());
             expr_id = manage_assignment_operation_type_conversion((*function_arg_pointer).variable_type, expr_id);
+        }
+        if(expr_id == -1) {
+            yyerror(("argument " + std::to_string(current_parameter) + " passed to function " + symtable[procedure_id].name + " cannot be implicitly converted").c_str());
+            append_command_to_stream("push.i", "#-1", "&" + symtable[expr_id].name);
         }
         append_command_to_stream("push.i", symtable[expr_id].get_variable_to_asm(true), "&" + symtable[expr_id].name);
         ++function_arg_pointer;

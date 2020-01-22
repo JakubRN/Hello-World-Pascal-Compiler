@@ -1,11 +1,6 @@
 #pragma once
 #include "global.h"
 
-struct variable_info {
-    data_type variable_type = data_type::integer;
-    int array_size;
-};
-
 struct entry {
     bool is_reference = false;
     bool is_global = true;
@@ -23,6 +18,9 @@ struct entry {
     entry(std::string _name, entry_type _token) : 
          name(std::move(_name)), token(_token) { ; }
 
+    bool is_array() {
+         return type.variable_type == data_type::array_integer || type.variable_type == data_type::array_real;
+    }
     std::string get_variable_to_asm(bool pass_reference = false){
         std::string return_name;
         if(token == entry_type::number)
@@ -44,8 +42,17 @@ struct entry {
                 return_name = '#' + return_name;
             }
         }
-
-            
         return return_name;
     };
+     std::string get_name_to_asm(bool pass_reference = false){
+            if(is_reference &&  ! pass_reference) {
+                return '*' + name;
+
+            }
+            else if ( pass_reference && ! is_reference) {
+                return '&' + name;
+            }
+            else 
+                return name;
+     }
 };
