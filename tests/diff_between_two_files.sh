@@ -1,0 +1,1 @@
+sdiff -l -E -Z -b "out_mine/$1.asm" "out_gwj/$1.asm" | cat -n | grep -v -e '($'  
