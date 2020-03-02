@@ -5,9 +5,9 @@ struct entry {
     bool is_reference = false;
     bool is_global = true;
     std::string name;
-    entry_type token; 
+    entry_type type; 
 
-    variable_info type;
+    variable_info info;
 
     int size = 0;
 
@@ -15,17 +15,17 @@ struct entry {
 
     std::list<variable_info> arguments_types;
     
-    entry(std::string _name, entry_type _token) : 
-         name(std::move(_name)), token(_token) { ; }
+    entry(std::string _name, entry_type _type) : 
+         name(std::move(_name)), type(_type) { ; }
 
     bool is_array() {
-         return type.variable_type == data_type::array_integer || type.variable_type == data_type::array_real;
+         return info.variable_type == data_type::array_integer || info.variable_type == data_type::array_real;
     }
     std::string get_variable_to_asm(bool pass_reference = false){
         std::string return_name;
-        if(token == entry_type::number)
+        if(type == entry_type::number)
             return_name = "#" + name;
-        else if(token == entry_type::label)
+        else if(type == entry_type::label)
             return_name = "#" + name;
         else {
             return_name = std::to_string(abs(memory_offset));

@@ -60,7 +60,7 @@ std::stack<entry> module_stack;
 program:
     PROGRAM ID '(' identifier_list ')' ';' {
         generate_jump(symtable[$2].name);
-        symtable[$2].token = entry_type::label;
+        symtable[$2].type = entry_type::label;
         //TODO use identifier list
         identifier_list.clear();
     }
@@ -74,8 +74,32 @@ program:
         }
 ;
 identifier_list:
-    identifier_list ',' ID { identifier_list.emplace_back($3); }
-    | ID { identifier_list.emplace_back($1) ;}
+    identifier_list ',' ID { 
+            if(symtable[$3].type != entry_type::uninitialized) {
+                if(symtable[$3].is_global && ! global_scope) {
+                    //local variable with the same name
+                    $3 = insert_name(symtable[$3].name, entry_type::uninitialized);
+                }
+                else {
+                    yyerror("redeclaring variable with the same name: ");
+                    YYABORT;
+                }
+            }
+        identifier_list.emplace_back($3); 
+        }
+    | ID { 
+            if(symtable[$1].type != entry_type::uninitialized) {
+                if(symtable[$1].is_global && ! global_scope) {
+                    //local variable with the same name
+                    $1 = insert_name(symtable[$1].name, entry_type::uninitialized);
+                }
+                else {
+                    yyerror("redeclaring variable with the same name: ");
+                    YYABORT;
+                }
+            }
+            identifier_list.emplace_back($1);
+        }
 ;
 declarations:
     declarations VAR identifier_list ':' type ';' {
@@ -125,28 +149,35 @@ subprogram_declaration:
 ;
 subprogram_head:
     FUNCTION ID {symbol_table_size = symtable.size();} arguments ':' standard_type ';' {
+            if(symtable[$2].type != entry_type::uninitialized) {
+                yyerror("function uses name that already exists");
+                YYERROR;
+            }
             //Expects you to push return variable last
             symtable[$2].is_global = false;
             symtable[$2].is_reference = true;
-            symtable[$2].token = entry_type::function;
+            symtable[$2].type = entry_type::function;
             symtable[$2].memory_offset = 8;
 
-            symtable[$2].type.variable_type = get_data_type($6);
+            symtable[$2].info.variable_type = get_data_type($6);
             relative_stack_pointer = 0;
             output_string_stream << symtable[$2].name << ':' << std::endl;;
             for(const auto &symbol_table_index : parameters_list) {
-                symtable[$2].arguments_types.push_back( symtable[symbol_table_index].type );
+                symtable[$2].arguments_types.push_back( symtable[symbol_table_index].info );
             }
             parameters_list.clear();
         }
     | PROCEDURE ID {symbol_table_size = symtable.size();} arguments ';' { 
-             std::cout << "Procedure:\n" << $1;
+            if(symtable[$2].type != entry_type::uninitialized) {
+                yyerror("function uses name that already exists");
+                YYERROR;
+            }
             symtable[$2].is_global = false;
-            symtable[$2].token = entry_type::procedure;
+            symtable[$2].type = entry_type::procedure;
             relative_stack_pointer = 0;
             output_string_stream << symtable[$2].name << ':' << std::endl;;
             for(const auto &symbol_table_index : parameters_list) {
-                symtable[$2].arguments_types.push_back( {symtable[symbol_table_index].type.variable_type, 0 } );
+                symtable[$2].arguments_types.push_back( {symtable[symbol_table_index].info.variable_type, 0 } );
             }
             parameters_list.clear();
             
@@ -156,11 +187,9 @@ arguments:
     '(' parameter_list ')' {
         assert($-2 == PROCEDURE || $-2 == FUNCTION);
         if($-2 == PROCEDURE) {
-            std::cout << "procedure\n";
             relative_stack_pointer = parameters_list.size()*4 + 4;
         }
         else if($-2 == FUNCTION) {
-            std::cout << "Function\n";
             relative_stack_pointer = parameters_list.size()*4 + 8;
         }
         for(const auto &symbol_table_index : parameters_list) {
@@ -207,7 +236,7 @@ statement:
         auto end = add_free_label();
         $4 = end;
         std::string command = "je";
-        symtable[$3].type.variable_type == data_type::real ? command+=".r" : command += ".i";
+        symtable[$3].info.variable_type == data_type::real ? command+=".r" : command += ".i";
         generate_command(command, $3, index_of_zero, end);
     } statement {
         generate_jump(symtable[$1].name);
@@ -234,7 +263,7 @@ if_expr:
     _IF expr {
         auto if_false = add_free_label();
         std::string command = "je";
-        symtable[$2].type.variable_type == data_type::real ? command+=".r" : command += ".i";
+        symtable[$2].info.variable_type == data_type::real ? command+=".r" : command += ".i";
         generate_command(command, $2, index_of_zero, if_false);
         $$ = if_false;
     }
@@ -253,20 +282,25 @@ other_statement:
     | compound_statement
     ;
 variable:
-    ID
+    ID { 
+        if(symtable[$1].type == entry_type::uninitialized) {
+            yyerror("unknown variable");
+            YYERROR;
+        }
+    }
     | ID '[' expr ']'  {
         //TODO offset is calculated from starting index, not 1
         assert(symtable[$1].is_array());
         auto address_index = add_temporary_variable(data_type::integer);
         auto right_hand = manage_assignment_operation_type_conversion(data_type::integer, $3);
-        generate_command("sub.i", right_hand, insert_dummy_number(symtable[$1].type.beginning_index), address_index);
+        generate_command("sub.i", right_hand, insert_dummy_number(symtable[$1].info.beginning_index), address_index);
         int return_index;
-        if(symtable[$1].type.variable_type == data_type::array_integer){
+        if(symtable[$1].info.variable_type == data_type::array_integer){
             generate_command("mul.i", address_index, index_of_four, address_index);
             return_index = add_temporary_variable(data_type::integer);
         }
 
-        if(symtable[$1].type.variable_type == data_type::array_real){
+        if(symtable[$1].info.variable_type == data_type::array_real){
             generate_command("mul.i", address_index, index_of_eight, address_index);
             return_index = add_temporary_variable(data_type::real);
         }
@@ -278,33 +312,40 @@ variable:
 ;
 procedure_statement:
     ID {
-        if(symtable[$1].token == entry_type::procedure) {
+        if(symtable[$1].type == entry_type::procedure) {
             append_command_to_stream("call.i", "#" + symtable[$1].name, "&" + symtable[$1].name);
         }
         else {
             yyerror(("expected procedure, got: " + get_entry_type_string($1)).c_str());
+            YYERROR;
         }
         }
     | ID '(' expression_list ')' {
-        if(symtable[$1].token == entry_type::procedure) {
+        if(symtable[$1].type == entry_type::procedure) {
             auto write_id = lookup_name("write");
             auto read_id = lookup_name("read");
             if($1 == write_id) {
                 for(auto &elem : expression_list) {
-                    if(symtable[elem].type.variable_type == data_type::real)
+                    if(symtable[elem].info.variable_type == data_type::real)
                         generate_command("write.r", elem);
-                    else if(symtable[elem].type.variable_type == data_type::integer)
+                    else if(symtable[elem].info.variable_type == data_type::integer)
                         generate_command("write.i", elem);
-                    else yyerror("wrong type of variable to write: expecting real or int");
+                    else {
+                        yyerror("wrong type of variable to write: expecting real or int");
+                        YYERROR;
+                    }
                 }
             }
             else if ($1 == read_id) {
                 for(auto &elem : expression_list) {
-                    if(symtable[elem].type.variable_type == data_type::real)
+                    if(symtable[elem].info.variable_type == data_type::real)
                         generate_command("read.r", elem);
-                    else if(symtable[elem].type.variable_type == data_type::integer)
+                    else if(symtable[elem].info.variable_type == data_type::integer)
                         generate_command("read.i", elem);
-                    else yyerror("wrong type of variable to read: expecting real or int");
+                    else {
+                        yyerror("wrong type of variable to read: expecting real or int");
+                        YYERROR;
+                    }
                 }
             }
             else {
@@ -314,9 +355,9 @@ procedure_statement:
                 append_command_to_stream("incsp.i", "#" + std::to_string(stack_ptr), std::to_string(stack_ptr));
             }
         }
-        else if(symtable[$1].token == entry_type::function) {
+        else if(symtable[$1].type == entry_type::function) {
             push_arguments_list($1, expression_list);
-            auto tmp_index = add_temporary_variable(symtable[$1].type.variable_type);
+            auto tmp_index = add_temporary_variable(symtable[$1].info.variable_type);
             append_command_to_stream("push.i", symtable[tmp_index].get_variable_to_asm(true), "&" + symtable[tmp_index].name);
             append_command_to_stream("call.i", "#" + symtable[$1].name, "&" + symtable[$1].name);
             auto stack_ptr = 4 + symtable[$1].arguments_types.size() * 4;
@@ -375,8 +416,8 @@ expr:
     | '(' expr ')' { $$ = $2; }
     | NUM
     | variable {
-        if(symtable[$1].token == entry_type::function) {
-            auto tmp_index = add_temporary_variable(symtable[$1].type.variable_type);
+        if(symtable[$1].type == entry_type::function) {
+            auto tmp_index = add_temporary_variable(symtable[$1].info.variable_type);
             append_command_to_stream("push.i", "#" + symtable[tmp_index].get_variable_to_asm(), "&" + symtable[tmp_index].name);
             append_command_to_stream("call.i", "#" + symtable[$1].name, "&" + symtable[$1].name);
             append_command_to_stream("incsp.i", "#4", "4");
@@ -384,9 +425,9 @@ expr:
         }
     }
     | ID '(' expression_list ')' {
-        if(symtable[$1].token == entry_type::function) {
+        if(symtable[$1].type == entry_type::function) {
             push_arguments_list($1, expression_list);
-            auto tmp_index = add_temporary_variable(symtable[$1].type.variable_type);
+            auto tmp_index = add_temporary_variable(symtable[$1].info.variable_type);
             append_command_to_stream("push.i", symtable[tmp_index].get_variable_to_asm(true), "&" + symtable[tmp_index].name);
             append_command_to_stream("call.i", "#" + symtable[$1].name, "&" + symtable[$1].name);
             auto stack_ptr = 4 + symtable[$1].arguments_types.size() * 4;

@@ -13,7 +13,7 @@ init () {
     };
 
     for (auto &p : keywords)
-        insert_name (p.name, p.token);
+        insert_name (p.name, p.type);
 }
 
 

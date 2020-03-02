@@ -20,11 +20,11 @@ void append_command_to_stream(std::string command, std::string parameters, std::
 }
 
 void generate_assign_op(int left_operand, int right_operand){
-    right_operand = manage_assignment_operation_type_conversion(symtable[left_operand].type.variable_type, right_operand);
+    right_operand = manage_assignment_operation_type_conversion(symtable[left_operand].info.variable_type, right_operand);
     std::string command;
-    if(symtable[left_operand].type.variable_type == data_type::integer)
+    if(symtable[left_operand].info.variable_type == data_type::integer)
         command = "mov.i";
-    else if(symtable[left_operand].type.variable_type == data_type::real)
+    else if(symtable[left_operand].info.variable_type == data_type::real)
         command = "mov.r";
     generate_command(command, right_operand, left_operand);
 }
@@ -32,7 +32,7 @@ void generate_assign_op(int left_operand, int right_operand){
 int generate_arithmetic_operation(std::string command, int index_operand_1, int index_operand_2) {
     auto [index_input_1, index_input_2] = manage_type_promotion(index_operand_1, index_operand_2);
         int output_index;
-        if(symtable[index_input_1].type.variable_type == data_type::real) {
+        if(symtable[index_input_1].info.variable_type == data_type::real) {
             command += ".r";
             output_index = add_temporary_variable(data_type::real);
         }
@@ -49,7 +49,7 @@ void generate_label(std::string label_name) {
         output_string_stream << label_name << ':' << std::endl;
     else
         single_module_output << label_name << ':' << std::endl;
-};
+}
 
 void generate_command(std::string command_name, int first_arg, int second_arg, int third_arg, 
                         bool pass_ref_1, bool pass_ref_2, bool pass_ref_3) {
@@ -68,7 +68,7 @@ void generate_command(std::string command_name, int first_arg, int second_arg, i
         comments_with_names <<  "," << symtable[third_arg].get_name_to_asm(pass_ref_3);
     }
     append_command_to_stream(command_name, tmp_stringstream.str(), comments_with_names.str());
-};
+}
 
 
 void generate_jump(std::string label_name) {
@@ -78,7 +78,7 @@ void generate_jump(std::string label_name) {
 
 int generate_relop(std::string command, int operand_1, int operand_2) {
     std::tie(operand_1, operand_2) = manage_type_promotion(operand_1, operand_2);
-    symtable[operand_1].type.variable_type == data_type::real ? command+=".r" : command += ".i";
+    symtable[operand_1].info.variable_type == data_type::real ? command+=".r" : command += ".i";
     auto if_true = add_free_label();
     auto if_false = add_free_label();
     generate_command(command, operand_1, operand_2, if_true);

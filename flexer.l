@@ -46,10 +46,10 @@ opsign      [\+\-\*\/\(\)\;\<\>\=\.\:\[\]\,]
 (and)        {return AND;}
 (not)        {return NOT;}
 {num_int}        {  yylval = lookup_or_install(entry_type::number);
-                    symtable[yylval].type.variable_type=data_type::integer;
+                    symtable[yylval].info.variable_type=data_type::integer;
                     return NUM;}
 {num_real}       {yylval = lookup_or_install(entry_type::number); 
-                symtable[yylval].type.variable_type=data_type::real;
+                symtable[yylval].info.variable_type=data_type::real;
                 return NUM;}
 {id}        {yylval = lookup_or_install(entry_type::uninitialized);  return ID;}
 {opsign}    {return(yytext[0]);}
