@@ -1,3 +1,0 @@
-dlaczego w teście 8 zmienna q jest pod adresem 4 a inne pod adresem 12 zamiast 8
-
-test t8_dummy wywala się na wirtualnej maszynie
