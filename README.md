@@ -2,6 +2,13 @@
 A repository of a project which exploits Flex lexical analyzer along with Bison parser to produce a simple compiler of Pascal-like procedural language. The compiler generates intermediate asm code, and comes along with a bunch of tests, including bubblesort procedure for integers as well as floating point numbers
 # Motivation
 I did it as a part of a course during my master studies, thus the repository is provided with exemplary compiler provided by the lecturer to test for correctness
+# Prerequisites
+gcc 7.4.0
+
+flex 2.6.4
+
+bison (GNU Bison) 3.0.4
+
 # Usage
 You can compile your compiler by just typing make, and run the generated compiler program like:
 ```
